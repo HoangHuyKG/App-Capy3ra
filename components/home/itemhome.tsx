@@ -7,6 +7,7 @@ import AntDesign from '@expo/vector-icons/AntDesign';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import ModalMenu from "../modal/modal.menu";
 import { useState } from "react";
+import ModalDashBoard from "../modal/modal.dashboard";
 const styles = StyleSheet.create({
     container: {
         marginVertical: 10,
@@ -103,6 +104,7 @@ const styles = StyleSheet.create({
 })
 const ItemHome = () => {
     const [modalVisible, setModalVisible] = useState(false);
+    const [modalVisible2, setModalVisible2] = useState(false);
 
     return (
         <View style={styles.container}>
@@ -140,12 +142,16 @@ const ItemHome = () => {
                     <Text style={styles.itembottombuttontext}>Ôn tập thông thường</Text>
                 </TouchableOpacity>
                 <View>
-                <MaterialIcons name="dashboard" size={24} color="black" />
+                <MaterialIcons name="dashboard" size={24} color="black" onPress={() => setModalVisible2(true)}/>
                 </View>
             </View>
             <ModalMenu 
                 modalVisible={modalVisible}
                 setModalVisible={setModalVisible}
+            />
+            <ModalDashBoard 
+                modalVisible={modalVisible2}
+                setModalVisible={setModalVisible2}
             />
         </View>
     )

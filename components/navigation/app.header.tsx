@@ -33,20 +33,26 @@ const styles = StyleSheet.create({
     }
 })
 const AppHeader = () => {
+    
     const navigation: any = useNavigation();
     return (
         <View style={styles.container}>
             <View style={styles.menu} >
-                <Octicons name="stack" size={30} color="black"  onPress={()=>navigation.openDrawer()}/>
+                <Octicons name="stack" size={30} color="black" onPress={() => navigation.openDrawer()} />
             </View>
-            <Image
-                style={styles.imagelogo}
-                source={ImagesAssets.imagelogo}
-            />
-            <Image
-                style={styles.imageuser}
-                source={ImagesAssets.unknowuser}
-            />
+            <TouchableOpacity onPress={() => navigation.navigate("HomeScreen")}>
+                <Image
+                    style={styles.imagelogo}
+                    source={ImagesAssets.imagelogo}
+                />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => navigation.navigate("SettingScreen")}>
+                <Image
+                    style={styles.imageuser}
+                    source={ImagesAssets.unknowuser}
+                />
+            </TouchableOpacity>
+
         </View>
     )
 }

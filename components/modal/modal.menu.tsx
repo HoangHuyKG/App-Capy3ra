@@ -23,7 +23,8 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: 'rgba(0, 0, 0, 0.7)', // Semi-transparent background
+        backgroundColor: 'rgba(0, 0, 0, 0.7)',
+        height: '100%',
       },
       modalContainer: {
         width: 317,
@@ -81,11 +82,11 @@ const ModalMenu = (props: Iprops) => {
         <Pressable style={styles.modalOverlay} onPress={()=>setModalVisible(false)}>
           <View style={styles.modalContainer}>
             {/* Modal Options */}
-            <TouchableOpacity style={styles.modalItem}>
+            <TouchableOpacity style={styles.modalItem} onPress={()=>navigation.navigate("DetailCourseScreen")}>
               <Text style={styles.modalText}>Chi tiết khóa học</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.modalItem2}>
+            <TouchableOpacity style={styles.modalItem2} onPress={()=>navigation.navigate("Leaderboard")}>
               <Text style={styles.modalText}>Bảng xếp hạng</Text>
             </TouchableOpacity>
 
