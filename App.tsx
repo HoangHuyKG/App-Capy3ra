@@ -37,5 +37,7 @@ const styles = StyleSheet.create({
     
   },
 });
-
+// web: 1043874943091-q6sc9588lul637gjhqhinq0vlg4923sc.apps.googleusercontent.com
+// ios: 1043874943091-13abkutjv0ediq8ndmcc0huf1d62o17c.apps.googleusercontent.com
+// ad: 1043874943091-d6i0sbn8uotoctsrl1nl1codpa6jt87n.apps.googleusercontent.com
 export default App;
