@@ -8,6 +8,7 @@ import ItemHome from "./itemhome";
 import { FlatList } from "react-native-gesture-handler";
 import ModalLearnOrTeach from "../modal/modal.learnorteach";
 import { useState } from "react";
+import { useRoute } from '@react-navigation/native';
 import ModalMenu from "../modal/modal.menu";
 const styles = StyleSheet.create({
     container: {
@@ -38,7 +39,7 @@ const styles = StyleSheet.create({
 })
 const HomeScreen = () => {
 const [modalVisible, setModalVisible] = useState(false);
-    
+
     return (
         <View style={styles.container}>
             <AppHeader />

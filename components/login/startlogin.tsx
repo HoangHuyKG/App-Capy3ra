@@ -4,6 +4,8 @@ import AntDesign from '@expo/vector-icons/AntDesign';
 import { globalFont } from "../../utils/const";
 import { useNavigation } from '@react-navigation/native';
 import {  NavigationProp } from '@react-navigation/native'
+import { StatusBar } from 'react-native';
+import { SafeAreaView } from 'react-native';
 const styles = StyleSheet.create({
     container: {
         display: 'flex',
@@ -75,8 +77,10 @@ const StartedLoginScreen = () => {
     const navigation: NavigationProp<RootStackParamList> = useNavigation();
     return (
        
-        <View style={styles.container}>
+        <SafeAreaView  style={styles.container}>
+             <StatusBar barStyle="light-content" backgroundColor="#02929A" hidden={true}/>
             <View style={styles.boxlogo}>
+                
             <Image
                 style={styles.logo}
                 source={ImagesAssets.imagelogo}
@@ -109,7 +113,7 @@ const StartedLoginScreen = () => {
                     <Text style={styles.buttonText}>Bắt đầu</Text>
                 </TouchableOpacity>
             </View>
-        </View>
+        </SafeAreaView >
     )
 }
 

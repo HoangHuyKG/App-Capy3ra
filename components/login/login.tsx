@@ -16,7 +16,7 @@ import {
     forceCodeForRefreshToken: true, // [Android] related to `serverAuthCode`, read the docs link below *.
     iosClientId: '1043874943091-13abkutjv0ediq8ndmcc0huf1d62o17c.apps.googleusercontent.com', // [iOS] if you want to specify the client ID of type iOS (otherwise, it is taken from GoogleService-Info.plist)
   });
-
+  import { useUser } from '../home/UserContext.js';
 const styles = StyleSheet.create({
     container: {
         display: 'flex',
@@ -70,12 +70,13 @@ const styles = StyleSheet.create({
 
 const LoginScreen = () => {
     const navigation: NavigationProp<RootStackParamList> = useNavigation();
+    const { setUserInfo } = useUser();
     const signIn = async () => {
 
         try {
           await GoogleSignin.hasPlayServices();
           const userInfo = await GoogleSignin.signIn();
-            console.log("USer info", userInfo);
+            setUserInfo(userInfo);
             navigation.navigate("HomeScreen");
         } catch (error: any) {  
           if (isErrorWithCode(error)) {

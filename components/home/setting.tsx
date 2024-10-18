@@ -7,7 +7,8 @@ import CourseItem from "./itemcourse";
 import { globalFont } from "../../utils/const";
 import React from "react";
 import { ImagesAssets } from "../../assets/images/ImagesAssets";
-import { NavigationProp, useNavigation } from "@react-navigation/native";
+import { NavigationProp, useNavigation, useRoute } from "@react-navigation/native";
+import { useUser } from "./UserContext";
 
 const styles = StyleSheet.create({
     container: {
@@ -23,7 +24,7 @@ const styles = StyleSheet.create({
     profileImage: {
         width: 150,
         height: 150,
-        borderRadius: 50,
+        borderRadius: 75,
         marginBottom: 10,
     },
     name: {
@@ -71,7 +72,8 @@ const SettingScreen = () => {
     const navigation: NavigationProp<RootStackParamList> = useNavigation();
     const [notificationsEnabled, setNotificationsEnabled] = React.useState(true);
     const [theme, setTheme] = React.useState('Sáng');
-  
+    const { userInfo } = useUser();
+
     const toggleNotifications = () => setNotificationsEnabled(previousState => !previousState);
   
     const toggleTheme = () => setTheme(theme === 'Sáng' ? 'Tối' : 'Sáng');
@@ -84,9 +86,9 @@ const SettingScreen = () => {
             <View style={styles.containerview}>
 
             <View style={styles.header}>
-                <Image source={ImagesAssets.unknowuser} style={styles.profileImage} />
-                <Text style={styles.name}>Võ Hoàng Thành</Text>
-                <Text style={styles.contact}>youremail@domain.com | 03 999 999 999</Text>
+                <Image source={{uri: userInfo?.data?.user?.photo}} style={styles.profileImage} />
+                <Text style={styles.name}>{userInfo?.data?.user?.name}</Text>
+                <Text style={styles.contact}>{userInfo?.data?.user?.email}</Text>
             </View>
 
             <TouchableOpacity style={styles.option} onPress={()=> navigation.navigate("EditProfileScreen")}>
