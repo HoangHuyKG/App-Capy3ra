@@ -1,46 +1,84 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, Image, StyleSheet } from 'react-native';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { ImagesAssets } from '../../assets/images/ImagesAssets';
 import AntDesign from '@expo/vector-icons/AntDesign';
+import { db } from '../../firebaseConfig';
+import { collection, getDocs } from 'firebase/firestore';
+import { TouchableOpacity } from 'react-native-gesture-handler';
+import { NavigationProp, useNavigation } from '@react-navigation/native';
+
 const CourseItem = () => {
-  return (
-    <View style={styles.cardContainer}>
-      {/* Image and category icon */}
-      <View style={styles.header}>
-        <Image
-          source={ImagesAssets.imagelogo}
-          style={styles.courseImage}
-        />
-        <View style={styles.categoryIcon}>
-          <Image
-            source={ImagesAssets.imagelogo}
-            style={styles.iconImage}
-          />
-        </View>
-      </View>
+  const [courses, setCourses] = useState([]);
+  const navigation: NavigationProp<any> = useNavigation();
+  useEffect(() => {
+    const fetchCourses = async () => {
+      try {
+        const querySnapshot = await getDocs(collection(db, 'Courses'));
+        const coursesData = querySnapshot.docs.map(doc => {
+          console.log('Document data:', doc.data()); // Log dữ liệu tài liệu
+          return { id: doc.id, ...doc.data() };
+        });
+        console.log('Courses Data:', coursesData); // Log mảng dữ liệu khóa học
+        setCourses(coursesData);
+      } catch (error) {
+        console.error("Error fetching courses: ", error);
+      }
+    };
+    
+    fetchCourses();
+  }, []);
 
-      {/* Course details */}
-      <View style={styles.detailsContainer}>
-        <View style={styles.courseInfo}>
-          <Text style={styles.categoryText}>Tiếng Anh</Text>
-          <Text style={styles.authorText}>bởi Thành dz</Text>
-        </View>
-        <Text style={styles.courseTitle}>400 từ toeic - Khóa học tuyệt vời</Text>
+  return (   
+     
+ 
 
-        {/* Stats */}
-        <View style={styles.statsContainer}>
-          <View style={styles.stat}>
-            <MaterialIcons name="groups" size={24} color="black" />
-            <Text style={styles.statText}>22k</Text>
+    <View >
+      {courses.length > 0 ? (
+        courses.map(course => (
+          <View key={course.course_id} style={styles.cardContainer}>
+            <TouchableOpacity  onPress={()=>navigation.navigate("ReviewCourseScreen")}>
+            <View style={styles.header}>
+              <Image
+                source={ImagesAssets.imagelogo}
+                style={styles.courseImage}
+              />
+              <View style={styles.categoryIcon}>
+                <Image
+                  source={ImagesAssets.imagelogo}
+                  style={styles.iconImage}
+                />
+              </View>
+            </View>
+  
+            <View style={styles.detailsContainer}>
+              <View style={styles.courseInfo}>
+                <Text style={styles.categoryText}>{course.language ? course.language.trim() : 'N/A'}</Text>
+                <Text style={styles.authorText}>{course.created_by ? course.created_by.trim() : 'N/A'}</Text>
+              </View>
+              <Text style={styles.courseTitle}>{course.title ? course.title.trim() : 'N/A'}</Text>
+  
+              <View style={styles.statsContainer}>
+                <View style={styles.stat}>
+                  <MaterialIcons name="groups" size={24} color="black" />
+                  <Text style={styles.statText}>22k</Text>
+                </View>
+                <View style={styles.stat}>
+                  <AntDesign name="clockcircleo" size={24} color="black" />
+                  <Text style={styles.statText}>72h</Text>
+                </View>
+              </View>
+            </View>
+          </TouchableOpacity>
           </View>
-          <View style={styles.stat}>
-          <AntDesign name="clockcircleo" size={24} color="black" />
-            <Text style={styles.statText}>72h</Text>
-          </View>
-        </View>
-      </View>
+        ))
+      ) : (
+        <Text>No courses found</Text>
+        
+      )}
+      
     </View>
+  
   );
 };
 
@@ -56,6 +94,7 @@ const styles = StyleSheet.create({
     shadowRadius: 5,
     elevation: 3,
   },
+
   header: {
     flexDirection: 'row',
     alignItems: 'center',

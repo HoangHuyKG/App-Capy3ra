@@ -4,7 +4,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import {useEffect} from 'react';
 import { globalFont } from './utils/const';
 import { NavigationContainer } from '@react-navigation/native';
-
+import { app } from './firebaseConfig'; 
 import AppNavigation from './components/navigation/app.navigation';
 
 SplashScreen.preventAutoHideAsync();

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "205669129959",
+    "project_id": "ruaconkg-f4802",
+    "storage_bucket": "ruaconkg-f4802.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:205669129959:android:b581cf0e12d8b1671e8c42",
+        "android_client_info": {
+          "package_name": "com.ruaconkg.sampleapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDN0abnSoMI-MvQTrfjrRxqblatGK2n2fg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

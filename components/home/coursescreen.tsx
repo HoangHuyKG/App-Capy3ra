@@ -161,15 +161,9 @@ const CourseScreen = () => {
                 </View>
 
                 <ScrollView style={styles.courseList}>
-                    <TouchableOpacity onPress={()=>navigation.navigate("ReviewCourseScreen")}>
+          
                         <CourseItem />
-                    </TouchableOpacity>
-                    <TouchableOpacity onPress={()=>navigation.navigate("ReviewCourseScreen")}>
-                        <CourseItem />
-                    </TouchableOpacity>
-                    <TouchableOpacity onPress={()=>navigation.navigate("ReviewCourseScreen")}>
-                        <CourseItem />
-                    </TouchableOpacity>
+             
                 </ScrollView>
             </View>
         </View>
