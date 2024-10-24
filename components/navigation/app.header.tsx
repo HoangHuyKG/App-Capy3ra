@@ -2,6 +2,7 @@ import { StyleSheet, Text, View, Image, Button, TouchableOpacity } from "react-n
 import Octicons from '@expo/vector-icons/Octicons';
 import { ImagesAssets } from "../../assets/images/ImagesAssets";
 import { NavigationProp, useNavigation } from "@react-navigation/native";
+import { useUser } from "../home/UserContext";
 const styles = StyleSheet.create({
     container: {
         display: 'flex',
@@ -33,23 +34,25 @@ const styles = StyleSheet.create({
     }
 })
 const AppHeader = () => {
-    
     const navigation: any = useNavigation();
+    const { userInfo } = useUser();
+    console.log(userInfo)
     return (
         <View style={styles.container}>
             <View style={styles.menu} >
                 <Octicons name="stack" size={30} color="black" onPress={() => navigation.openDrawer()} />
             </View>
-            <TouchableOpacity onPress={() => navigation.navigate("HomeScreen")}>
+            <TouchableOpacity onPress={() => navigation.navigate("HomeScreen", {userInfo})}>
                 <Image
                     style={styles.imagelogo}
                     source={ImagesAssets.imagelogo}
                 />
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => navigation.navigate("SettingScreen")}>
+            <TouchableOpacity onPress={() => navigation.navigate("SettingScreen", {userInfo})}>
                 <Image
                     style={styles.imageuser}
-                    source={ImagesAssets.unknowuser}
+                    source={{ uri: userInfo?.data?.user?.photo}}
+
                 />
             </TouchableOpacity>
 

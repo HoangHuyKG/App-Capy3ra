@@ -109,7 +109,7 @@ android {
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
 
-    namespace "com.ruaconkg.sampleapp"
+    namespace 'com.ruaconkg.sampleapp'
     defaultConfig {
         applicationId 'com.ruaconkg.sampleapp'
         minSdkVersion rootProject.ext.minSdkVersion

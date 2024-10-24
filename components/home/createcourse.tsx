@@ -1,26 +1,88 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, TextInput, View, Button, TouchableOpacity, ScrollView } from 'react-native';
-import { Picker } from '@react-native-picker/picker'; // Import from the package
+import { StyleSheet, Text, TextInput, View, TouchableOpacity, ScrollView, Alert } from 'react-native';
+import { Picker } from '@react-native-picker/picker';
 import AppHeader from '../navigation/app.header';
+import { db } from '../../firebaseConfig';
 import { globalFont } from '../../utils/const';
+import { collection, addDoc } from 'firebase/firestore';
+import { useUser } from './UserContext';
+
 const CreateCourseScreen = () => {
+    const { userInfo } = useUser(); // Lấy userInfo từ context
+    const [courseId, setCourseId] = useState('');
+    const [createdBy, setCreatedBy] = useState('');
+    const [description, setDescription] = useState('');
     const [language, setLanguage] = useState('');
+    const [level, setLevel] = useState('');
+    const [title, setTitle] = useState('');
+    const [imageUrl, setImageUrl] = useState('');
+    const [imageUser, setImageUser] = useState(userInfo?.data?.user?.photo || ''); // Đặt giá trị ban đầu đúng
+
+    const handleCreateCourse = async () => {
+        if (!courseId || !createdBy || !description || !language || !level || !title || !imageUrl || !imageUser) {
+            Alert.alert("Lỗi", "Vui lòng điền đầy đủ thông tin");
+            return;
+        }
+
+        try {
+            await addDoc(collection(db, 'Courses'), {
+                course_id: courseId,
+                created_by: createdBy,
+                description,
+                language,
+                level,
+                title,
+                imageUrl,
+                imageUser, // Lưu URL ảnh vào Firestore
+                createdAt: new Date()
+            });
+            Alert.alert("Thành công", "Khóa học đã được tạo thành công");
+            setCourseId('');
+            setCreatedBy('');
+            setDescription('');
+            setLanguage('');
+            setLevel('');
+            setTitle('');
+            setImageUrl('');
+            setImageUser('');
+        } catch (error) {
+            Alert.alert("Lỗi", "Không thể tạo khóa học, vui lòng thử lại");
+            console.error(error);
+        }
+    };
 
     return (
         <View style={styles.container}>
             <AppHeader />
             <ScrollView style={styles.containerbox}>
-               
-
-                {/* Form Nhập Liệu */}
                 <View style={styles.formContainer}>
-                    <Text style={styles.label}>Tên</Text>
+                    <Text style={styles.label}>Mã khóa học</Text>
                     <TextInput
                         style={styles.input}
-                        placeholder="Đặt tên phù hợp cho khóa học"
+                        placeholder="Nhập mã khóa học"
+                        value={courseId}
+                        onChangeText={setCourseId}
                     />
 
-                    <Text style={styles.label}>Dạy</Text>
+                    <Text style={styles.label}>Người tạo</Text>
+                    <TextInput
+                        style={styles.input}
+                        placeholder="Nhập tên người tạo"
+                        value={createdBy}
+                        onChangeText={setCreatedBy}
+                    />
+
+                    <Text style={styles.label}>Mô tả</Text>
+                    <TextInput
+                        style={styles.textArea}
+                        placeholder="Mô tả khóa học"
+                        multiline
+                        numberOfLines={4}
+                        value={description}
+                        onChangeText={setDescription}
+                    />
+
+                    <Text style={styles.label}>Ngôn ngữ</Text>
                     <View style={styles.pickerContainer}>
                         <Picker
                             selectedValue={language}
@@ -28,34 +90,37 @@ const CreateCourseScreen = () => {
                             style={styles.picker}
                         >
                             <Picker.Item label="Vui lòng lựa chọn 1 ngôn ngữ" value="" />
-                            <Picker.Item label="Tiếng Anh" value="english" />
-                            <Picker.Item label="Tiếng Tây Ban Nha" value="spanish" />
-                            <Picker.Item label="Tiếng Pháp" value="french" />
+                            <Picker.Item label="Tiếng Anh" value="English" />
+                            <Picker.Item label="Tiếng Tây Ban Nha" value="Spanish" />
+                            <Picker.Item label="Tiếng Nhật" value="Japanese" />
                         </Picker>
                     </View>
 
-                    <Text style={styles.label}>Từ Khóa</Text>
+                    <Text style={styles.label}>Cấp độ</Text>
                     <TextInput
                         style={styles.input}
-                        placeholder="Ví dụ: từ vựng Tây Ban Nha, học tiếng Tây Ban Nha online"
+                        placeholder="Nhập cấp độ (ví dụ: 1, 2, 3)"
+                        value={level}
+                        onChangeText={setLevel}
                     />
 
-                    <Text style={styles.label}>Mô tả</Text>
-                    <TextInput
-                        style={styles.textArea}
-                        placeholder="Mô tả khóa học bằng ngôn ngữ của người học"
-                        multiline
-                        numberOfLines={4}
-                    />
-
-                    <Text style={styles.label}>Mô tả ngắn gọn</Text>
+                    <Text style={styles.label}>Tiêu đề</Text>
                     <TextInput
                         style={styles.input}
-                        placeholder="Mô tả ngắn gọn về ứng dụng của chúng tôi"
+                        placeholder="Nhập tiêu đề khóa học"
+                        value={title}
+                        onChangeText={setTitle}
                     />
 
-                    {/* Nút tạo khóa học */}
-                    <TouchableOpacity style={styles.button}>
+                    <Text style={styles.label}>URL Hình Ảnh</Text>
+                    <TextInput
+                        style={styles.input}
+                        placeholder="Nhập URL hình ảnh của khóa học"
+                        value={imageUrl}
+                        onChangeText={setImageUrl}
+                    />
+
+                    <TouchableOpacity style={styles.button} onPress={handleCreateCourse}>
                         <Text style={styles.buttonText}>Tạo khóa học</Text>
                     </TouchableOpacity>
                 </View>

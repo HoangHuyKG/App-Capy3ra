@@ -7,19 +7,21 @@ import { db } from '../../firebaseConfig';
 import { collection, getDocs } from 'firebase/firestore';
 import { TouchableOpacity } from 'react-native-gesture-handler';
 import { NavigationProp, useNavigation } from '@react-navigation/native';
+import { format } from 'date-fns'; // Thư viện để định dạng ngày giờ
 
 const CourseItem = () => {
   const [courses, setCourses] = useState([]);
   const navigation: NavigationProp<any> = useNavigation();
+
   useEffect(() => {
     const fetchCourses = async () => {
       try {
         const querySnapshot = await getDocs(collection(db, 'Courses'));
         const coursesData = querySnapshot.docs.map(doc => {
-          console.log('Document data:', doc.data()); // Log dữ liệu tài liệu
-          return { id: doc.id, ...doc.data() };
+          const data = doc.data();
+          const createdAt = data.createdAt ? data.createdAt.toDate() : null; // Chuyển đổi timestamp sang dạng Date
+          return { id: doc.id, ...data, createdAt };
         });
-        console.log('Courses Data:', coursesData); // Log mảng dữ liệu khóa học
         setCourses(coursesData);
       } catch (error) {
         console.error("Error fetching courses: ", error);
@@ -29,56 +31,52 @@ const CourseItem = () => {
     fetchCourses();
   }, []);
 
-  return (   
-     
- 
-
-    <View >
+  return (
+    <View>
       {courses.length > 0 ? (
         courses.map(course => (
-          <View key={course.course_id} style={styles.cardContainer}>
-            <TouchableOpacity  onPress={()=>navigation.navigate("ReviewCourseScreen")}>
-            <View style={styles.header}>
-              <Image
-                source={ImagesAssets.imagelogo}
-                style={styles.courseImage}
-              />
-              <View style={styles.categoryIcon}>
+          <View key={course.id} style={styles.cardContainer}>
+            <TouchableOpacity onPress={() => navigation.navigate("ReviewCourseScreen" , { course })}>
+              <View style={styles.header}>
                 <Image
-                  source={ImagesAssets.imagelogo}
-                  style={styles.iconImage}
+                  source={{ uri: course.imageUrl || 'https://via.placeholder.com/150' }}
+                  style={styles.courseImage}
                 />
-              </View>
-            </View>
-  
-            <View style={styles.detailsContainer}>
-              <View style={styles.courseInfo}>
-                <Text style={styles.categoryText}>{course.language ? course.language.trim() : 'N/A'}</Text>
-                <Text style={styles.authorText}>{course.created_by ? course.created_by.trim() : 'N/A'}</Text>
-              </View>
-              <Text style={styles.courseTitle}>{course.title ? course.title.trim() : 'N/A'}</Text>
-  
-              <View style={styles.statsContainer}>
-                <View style={styles.stat}>
-                  <MaterialIcons name="groups" size={24} color="black" />
-                  <Text style={styles.statText}>22k</Text>
-                </View>
-                <View style={styles.stat}>
-                  <AntDesign name="clockcircleo" size={24} color="black" />
-                  <Text style={styles.statText}>72h</Text>
+                <View style={styles.categoryIcon}>
+                  <Image
+                    source={{ uri: course.imageUser || 'https://via.placeholder.com/150' }}
+                    style={styles.iconImage}
+                  />
                 </View>
               </View>
-            </View>
-          </TouchableOpacity>
+
+              <View style={styles.detailsContainer}>
+                <View style={styles.courseInfo}>
+                  <Text style={styles.categoryText}>{course.language ? course.language.trim() : 'N/A'}</Text>
+                  <Text style={styles.authorText}>{course.created_by ? course.created_by.trim() : 'N/A'}</Text>
+                </View>
+                <Text style={styles.courseTitle}>{course.title ? course.title.trim() : 'N/A'}</Text>
+
+                <View style={styles.statsContainer}>
+                  <View style={styles.stat}>
+                    <MaterialIcons name="groups" size={24} color="black" />
+                    <Text style={styles.statText}>22k</Text>
+                  </View>
+                  <View style={styles.stat}>
+                    <AntDesign name="clockcircleo" size={24} color="black" />
+                    <Text style={styles.statText}>
+                      {course.createdAt ? format(course.createdAt, 'dd/MM/yyyy') : 'N/A'}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+            </TouchableOpacity>
           </View>
         ))
       ) : (
         <Text>No courses found</Text>
-        
       )}
-      
     </View>
-  
   );
 };
 

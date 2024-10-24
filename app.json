@@ -28,6 +28,7 @@
       "eas": {
         "projectId": "db767947-ff27-4e88-a151-1de4b73e797b"
       }
-    }
+    },
+    "scheme": "sample-app"
   }
 }

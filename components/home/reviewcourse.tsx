@@ -4,53 +4,45 @@ import AppHeader from '../navigation/app.header';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { globalFont } from '../../utils/const';
 import { ImagesAssets } from '../../assets/images/ImagesAssets';
-import { NavigationProp, useNavigation } from '@react-navigation/native';
+import { NavigationProp, useNavigation, useRoute } from '@react-navigation/native';
 import VocabularyCard from '../modal/modal.vocabularycard';
 
 const ReviewCourseScreen = () => {
     const navigation: NavigationProp<RootStackParamList> = useNavigation();
+    const route = useRoute();
+    const { course } = route.params; // Lấy dữ liệu từ params
     const [modalVisible, setModalVisible] = useState(false);
+
     return (
         <View style={styles.container}>
             <AppHeader />
             <ScrollView style={styles.container}>
                 <View style={styles.header}>
-                    <Text style={styles.headerText}>Bộ từ vựng AA</Text>
-                    <Text style={styles.subHeaderText}>Learn the first 400 words that have helped other students to succeed in the TOEFL exam. Memrise makes these words stick to your mind instantly, and it makes sure that you really memorise them so that you can use them with confidence.</Text>
+                    <Text style={styles.headerText}>{course.title}</Text>
+                    <Text style={styles.subHeaderText}>{course.description}</Text> 
                     <View style={styles.creator}>
                         <Image
-                            source={{ uri: 'https://randomuser.me/api/portraits/women/44.jpg' }}
+                            source={{ uri: course.imageUser || 'https://randomuser.me/api/portraits/women/44.jpg' }}
                             style={styles.avatar}
                         />
-                        <Text style={styles.creatorName}>Võ Hoàng Thành</Text>
+                        <Text style={styles.creatorName}>{course.created_by}</Text>
                         <TouchableOpacity style={styles.buttonstudy} onPress={() => setModalVisible(true)}>
-
-                            <Text style={styles.textbutton} >
-                                Bắt đầu học
-                            </Text>
+                            <Text style={styles.textbutton}>Bắt đầu học</Text>
                         </TouchableOpacity>
                     </View>
-
                 </View>
-                <VocabularyCard
-                    modalVisible={modalVisible}
-                    setModalVisible={setModalVisible} />
-
+                <VocabularyCard modalVisible={modalVisible} setModalVisible={setModalVisible} />
                 {/* Days */}
                 <View style={styles.daySection}>
                     {["Ngày 1", "Ngày 2", "Ngày 3", "Ngày 4"].map((day, index) => (
                         <TouchableOpacity key={index} style={styles.dayCard} onPress={() => navigation.navigate("DetailVocabularyDay")}>
-                            <Image
-                                source={ImagesAssets.logodetail}
-                                style={styles.dayImage}
-                            />
+                            <Image source={ImagesAssets.logodetail} style={styles.dayImage} />
                             <Text style={styles.textimage}>{day}</Text>
                         </TouchableOpacity>
                     ))}
                 </View>
             </ScrollView>
         </View>
-
     );
 };
 
@@ -63,7 +55,7 @@ const styles = StyleSheet.create({
         display: 'flex',
         justifyContent: 'center',
         alignItems: 'center',
-        flexDirection: 'row'
+flexDirection: 'row'
     },
     buttonstudy: {
         backgroundColor: "#25B212",

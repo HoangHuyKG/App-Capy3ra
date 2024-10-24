@@ -2853,18 +2853,25 @@
   resolved "https://registry.npmjs.org/@react-native-community/slider/-/slider-4.5.3.tgz"
   integrity sha512-0mOdnIL3xPWYGkP7levDH3bBsjdMOiR5mQIzFrSkZznZdIfX9MvGnelNZxsWuibmkc3hczHybo7RRb6mE96H2g==
 
-"@react-native-firebase/app@^21.0.0", "@react-native-firebase/app@21.0.0":
-  version "21.0.0"
-  resolved "https://registry.npmjs.org/@react-native-firebase/app/-/app-21.0.0.tgz"
-  integrity sha512-CR7KMAWb5uKYyjvWlFdMYrchNF+8XXOk+hnDYcIe+jsHTu+L2tCBzmgE9U0RMUEOdJBIPQotAdnenVdipEbbUg==
+"@react-native-firebase/app@^21.1.0", "@react-native-firebase/app@21.1.0":
+  version "21.1.0"
+  resolved "https://registry.npmjs.org/@react-native-firebase/app/-/app-21.1.0.tgz"
+  integrity sha512-nb31yuAUqp39YD5YftdV6sOIjB9rk6J2tKpPiZfCsF70xkRxE+aQ1FhpmlGOorunqvK5Zrsf0rJzlbvLfgHIrQ==
   dependencies:
     firebase "10.13.2"
     superstruct "^0.6.2"
 
-"@react-native-firebase/firestore@^21.0.0":
-  version "21.0.0"
-  resolved "https://registry.npmjs.org/@react-native-firebase/firestore/-/firestore-21.0.0.tgz"
-  integrity sha512-cz3ASBxfj853LfICjKmRe4OXRG5hmzpVNqdvPT1K9K/SDkypMhv+NMKptfmevz3taRmNtSeCOwctid1VrhN+wg==
+"@react-native-firebase/auth@^21.1.0":
+  version "21.1.0"
+  resolved "https://registry.npmjs.org/@react-native-firebase/auth/-/auth-21.1.0.tgz"
+  integrity sha512-SoxrfdXmrpUwIIto127Zgb8J7UlKTkb9EVdcmquJ9ONeCW5vhZdQPsnpyX6qxCjWlnFyeUBCIG0T9zfWxa4xEQ==
+  dependencies:
+    plist "^3.1.0"
+
+"@react-native-firebase/firestore@^21.1.0":
+  version "21.1.0"
+  resolved "https://registry.npmjs.org/@react-native-firebase/firestore/-/firestore-21.1.0.tgz"
+  integrity sha512-Xt39BVR9l0fEdl8zch38IGIclrUGtDctUgtfAdYj8adYzeOlQ2NLM5GGaDx3MwhTSPhJk7SRYGV9oMFftsgluQ==
 
 "@react-native-google-signin/google-signin@^13.1.0":
   version "13.1.0"
@@ -4071,7 +4078,7 @@ balanced-match@^1.0.0:
   resolved "https://registry.npmjs.org/balanced-match/-/balanced-match-1.0.2.tgz"
   integrity sha512-3oSeUO0TMV67hN1AmbXsK4yaqU7tjiHlbxRDZOpH0KW9+CeX4bRAaX0Anxt0tx2MrpRpWwQaPwIlISEJhYU5Pw==
 
-base64-js@^1.2.3, base64-js@^1.3.1, base64-js@^1.5.1:
+base64-js@^1.2.3, base64-js@^1.3.0, base64-js@^1.3.1, base64-js@^1.5.1:
   version "1.5.1"
   resolved "https://registry.npmjs.org/base64-js/-/base64-js-1.5.1.tgz"
   integrity sha512-AKpaYlHn8t4SVbOHCy+b5+KKgvR4vrsD8vbvrbiQJps7fKDTkjkDry6ji0rUJjC0kzbNePLwzxq8iypo41qeWA==
@@ -5081,6 +5088,11 @@ data-view-byte-offset@^1.0.0:
     es-errors "^1.3.0"
     is-data-view "^1.0.1"
 
+date-fns@^4.1.0:
+  version "4.1.0"
+  resolved "https://registry.npmjs.org/date-fns/-/date-fns-4.1.0.tgz"
+  integrity sha512-Ukq0owbQXxa/U3EGtsdVBkR1w7KOQ5gIBqdH2hkvknzZPYvBxb/aa6E8L7tmjFtkwZBu3UXBbjIgPo/Ez4xaNg==
+
 dateformat@3.0.3:
   version "3.0.3"
   resolved "https://registry.npmjs.org/dateformat/-/dateformat-3.0.3.tgz"
@@ -5713,7 +5725,7 @@ expo-application@~5.1.1:
   resolved "https://registry.npmjs.org/expo-application/-/expo-application-5.1.1.tgz"
   integrity sha512-aDatTcTTCdTbHw8h4/Tq2ilc6InM5ntF9xWCJdOcnUEcglxxGphVI/lzJKBaBF6mJECA8mEOjpVg2EGxOctTwg==
 
-expo-application@~5.9.1:
+expo-application@~5.9.0, expo-application@~5.9.1:
   version "5.9.1"
   resolved "https://registry.npmjs.org/expo-application/-/expo-application-5.9.1.tgz"
   integrity sha512-uAfLBNZNahnDZLRU41ZFmNSKtetHUT9Ua557/q189ua0AWV7pQjoVAx49E4953feuvqc9swtU3ScZ/hN1XO/FQ==
@@ -5739,6 +5751,18 @@ expo-asset@~8.9.1:
     md5-file "^3.2.3"
     path-browserify "^1.0.0"
     url-parse "^1.5.9"
+
+expo-auth-session@~5.5.2:
+  version "5.5.2"
+  resolved "https://registry.npmjs.org/expo-auth-session/-/expo-auth-session-5.5.2.tgz"
+  integrity sha512-fgqrNz9FhCl/kNyU2Vy2AmLWk+X7vmgiGN2KVUgB8yLHl/tPogYLpNOiqFl/pMLMveoKjPpVOVfbz3RTJHJoTg==
+  dependencies:
+    expo-application "~5.9.0"
+    expo-constants "~16.0.0"
+    expo-crypto "~13.0.0"
+    expo-linking "~6.3.0"
+    expo-web-browser "~13.0.0"
+    invariant "^2.2.4"
 
 expo-cli@^6.3.10:
   version "6.3.10"
@@ -5826,6 +5850,13 @@ expo-constants@~16.0.0:
     "@expo/config" "~9.0.0"
     "@expo/env" "~0.3.0"
 
+expo-crypto@~13.0.0:
+  version "13.0.2"
+  resolved "https://registry.npmjs.org/expo-crypto/-/expo-crypto-13.0.2.tgz"
+  integrity sha512-7f/IMPYJZkBM21LNEMXGrNo/0uXSVfZTwufUdpNKedJR0fm5fH4DCSN79ZddlV26nF90PuXjK2inIbI6lb0qRA==
+  dependencies:
+    base64-js "^1.3.0"
+
 expo-file-system@~15.2.2:
   version "15.2.2"
   resolved "https://registry.npmjs.org/expo-file-system/-/expo-file-system-15.2.2.tgz"
@@ -5868,6 +5899,14 @@ expo-keep-awake@~13.0.2:
   version "13.0.2"
   resolved "https://registry.npmjs.org/expo-keep-awake/-/expo-keep-awake-13.0.2.tgz"
   integrity sha512-kKiwkVg/bY0AJ5q1Pxnm/GvpeB6hbNJhcFsoOWDh2NlpibhCLaHL826KHUM+WsnJRbVRxJ+K9vbPRHEMvFpVyw==
+
+expo-linking@~6.3.0:
+  version "6.3.1"
+  resolved "https://registry.npmjs.org/expo-linking/-/expo-linking-6.3.1.tgz"
+  integrity sha512-xuZCntSBGWCD/95iZ+mTUGTwHdy8Sx+immCqbUBxdvZ2TN61P02kKg7SaLS8A4a/hLrSCwrg5tMMwu5wfKr35g==
+  dependencies:
+    expo-constants "~16.0.0"
+    invariant "^2.2.4"
 
 expo-modules-autolinking@>=0.8.1, expo-modules-autolinking@1.11.1:
   version "1.11.1"
@@ -5938,6 +5977,11 @@ expo-status-bar@1.12.1:
   version "1.12.1"
   resolved "https://registry.npmjs.org/expo-status-bar/-/expo-status-bar-1.12.1.tgz"
   integrity sha512-/t3xdbS8KB0prj5KG5w7z+wZPFlPtkgs95BsmrP/E7Q0xHXTcDcQ6Cu2FkFuRM+PKTb17cJDnLkawyS5vDLxMA==
+
+expo-web-browser@~13.0.0, expo-web-browser@~13.0.3:
+  version "13.0.3"
+  resolved "https://registry.npmjs.org/expo-web-browser/-/expo-web-browser-13.0.3.tgz"
+  integrity sha512-HXb7y82ApVJtqk8tManyudtTrCtx8xcUnVzmJECeHCB0SsWSQ+penVLZxJkcyATWoJOsFMnfVSVdrTcpKKGszQ==
 
 expo@*, expo@>=47.0.0, expo@>=50.0.0, expo@51.0.20:
   version "51.0.20"
@@ -9160,7 +9204,7 @@ pkg-up@^3.1.0:
   dependencies:
     find-up "^3.0.0"
 
-plist@^3.0.5:
+plist@^3.0.5, plist@^3.1.0:
   version "3.1.0"
   resolved "https://registry.npmjs.org/plist/-/plist-3.1.0.tgz"
   integrity sha512-uysumyrvkUX0rX/dEVqt8gC3sTBzd4zoWfLeS29nb53imdaXVvLINYXTI2GNqzaMuvacNx4uJQ8+b3zXR0pkgQ==
@@ -9715,6 +9759,11 @@ react-is@^18.0.0:
   resolved "https://registry.npmjs.org/react-is/-/react-is-18.3.1.tgz"
   integrity sha512-/LLMVyas0ljjAtoYiPqYiL8VWXzUUdThrmU5+n20DZv+a+ClRoevUzw5JxU+Ieh5/c87ytoTBV9G1FiKfNJdmg==
 
+react-native-async-storage@^0.0.1:
+  version "0.0.1"
+  resolved "https://registry.npmjs.org/react-native-async-storage/-/react-native-async-storage-0.0.1.tgz"
+  integrity sha512-EwOIpNfwMiELMnS7HDzgyX2xO4TALK95O473Z6Kai5Il5j/03yTTErwMtvoYnA0OKUHd1R54ptmbbMukUH03Xg==
+
 react-native-dropdown-picker@^5.4.6:
   version "5.4.6"
   resolved "https://registry.npmjs.org/react-native-dropdown-picker/-/react-native-dropdown-picker-5.4.6.tgz"
@@ -9783,7 +9832,7 @@ react-native-vector-icons@*:
     prop-types "^15.7.2"
     yargs "^16.1.1"
 
-react-native@*, react-native@0.74.5:
+react-native@*, react-native@>=0.5.0, react-native@0.74.5:
   version "0.74.5"
   resolved "https://registry.npmjs.org/react-native/-/react-native-0.74.5.tgz"
   integrity sha512-Bgg2WvxaGODukJMTZFTZBNMKVaROHLwSb8VAGEdrlvKwfb1hHg/3aXTUICYk7dwgAnb+INbGMwnF8yeAgIUmqw==

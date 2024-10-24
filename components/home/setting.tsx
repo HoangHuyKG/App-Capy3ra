@@ -7,7 +7,9 @@ import CourseItem from "./itemcourse";
 import { globalFont } from "../../utils/const";
 import React from "react";
 import { ImagesAssets } from "../../assets/images/ImagesAssets";
-import { NavigationProp, useNavigation } from "@react-navigation/native";
+import { NavigationProp, useNavigation, useRoute } from "@react-navigation/native";
+import { useUser } from "./UserContext";
+import { auth } from '../../firebaseConfig'; // Đảm bảo đường dẫn này đúng
 
 const styles = StyleSheet.create({
     container: {
@@ -23,7 +25,7 @@ const styles = StyleSheet.create({
     profileImage: {
         width: 150,
         height: 150,
-        borderRadius: 50,
+        borderRadius: 75,
         marginBottom: 10,
     },
     name: {
@@ -71,11 +73,20 @@ const SettingScreen = () => {
     const navigation: NavigationProp<RootStackParamList> = useNavigation();
     const [notificationsEnabled, setNotificationsEnabled] = React.useState(true);
     const [theme, setTheme] = React.useState('Sáng');
-  
+    const { userInfo } = useUser();
+    const { setUserInfo } = useUser();
     const toggleNotifications = () => setNotificationsEnabled(previousState => !previousState);
   
     const toggleTheme = () => setTheme(theme === 'Sáng' ? 'Tối' : 'Sáng');
-  
+    const handleLogout = async () => {
+        try {
+          await auth.signOut(); // Đăng xuất từ Firebase
+          setUserInfo(null); // Xoá thông tin người dùng trong context
+          navigation.navigate("LoginScreen");
+        } catch (error) {
+          console.error("Sign-out error: ", error);
+        }
+      };
     return (
 
         <ScrollView style={styles.container}>
@@ -84,9 +95,9 @@ const SettingScreen = () => {
             <View style={styles.containerview}>
 
             <View style={styles.header}>
-                <Image source={ImagesAssets.unknowuser} style={styles.profileImage} />
-                <Text style={styles.name}>Võ Hoàng Thành</Text>
-                <Text style={styles.contact}>youremail@domain.com | 03 999 999 999</Text>
+                <Image source={{uri: userInfo?.data?.user?.photo}} style={styles.profileImage} />
+                <Text style={styles.name}>{userInfo?.data?.user?.name}</Text>
+                <Text style={styles.contact}>{userInfo?.data?.user?.email}</Text>
             </View>
 
             <TouchableOpacity style={styles.option} onPress={()=> navigation.navigate("EditProfileScreen")}>
@@ -116,7 +127,7 @@ const SettingScreen = () => {
                 <Text style={styles.optionText}>Trợ giúp</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.option}>
+            <TouchableOpacity style={styles.option} onPress={handleLogout}>
                 <Text style={styles.optionText}>Đăng xuất</Text>
             </TouchableOpacity>
 

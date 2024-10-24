@@ -1,20 +1,23 @@
-import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, Text } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, StyleSheet, ScrollView, Text, Alert } from 'react-native';
 import { TextInput, Button } from 'react-native-paper';
 import DropDownPicker from 'react-native-dropdown-picker';
 import { globalFont } from '../../utils/const';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { NavigationProp, useNavigation } from '@react-navigation/native';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { db } from '../../firebaseConfig';
+import { auth } from '../../firebaseConfig'; // Firebase Auth để lấy thông tin user hiện tại
 
 const EditProfileScreen = () => {
-    const [fullName, setFullName] = useState('Hoàng Gia Huy');
-    const [username, setUsername] = useState('aHuy.Ruacon');
-    const [email, setEmail] = useState('youremail@domain.com');
-    const [phone, setPhone] = useState('012 123 999 999');
-    const [address, setAddress] = useState('123 Nguyen van cu noi dai');
+    const [fullName, setFullName] = useState('');
 
-    const [gender, setGender] = useState('Nam');
-    const [country, setCountry] = useState('Việt Nam');
+    const [email, setEmail] = useState('');
+    const [phone, setPhone] = useState('');
+    const [address, setAddress] = useState('');
+
+    const [gender, setGender] = useState('');
+    const [country, setCountry] = useState('');
     const [openGender, setOpenGender] = useState(false);
     const [openCountry, setOpenCountry] = useState(false);
 
@@ -29,7 +32,54 @@ const EditProfileScreen = () => {
         { label: 'USA', value: 'USA' },
         { label: 'Japan', value: 'Japan' },
     ]);
+
     const navigation: NavigationProp<RootStackParamList> = useNavigation();
+
+    useEffect(() => {
+        const fetchUserData = async () => {
+            try {
+                const user = auth.currentUser;
+                if (user) {
+                    const userDoc = await getDoc(doc(db, 'Users', user.uid));
+                    if (userDoc.exists()) {
+                        const userData = userDoc.data();
+                        setFullName(userData.name || '');
+                        setEmail(userData.email || '');
+                        setPhone(userData.phone || '');
+                        setAddress(userData.address || '');
+                        setGender(userData.gender || '');
+                        setCountry(userData.country || '');
+                    } else {
+                        console.log("Không tìm thấy dữ liệu người dùng");
+                    }
+                }
+            } catch (error) {
+                console.error("Lỗi khi lấy dữ liệu người dùng: ", error);
+            }
+        };
+
+        fetchUserData();
+    }, []);
+
+    const handleUpdateProfile = async () => {
+        try {
+            const user = auth.currentUser;
+            if (user) {
+                await setDoc(doc(db, 'Users', user.uid), {
+                    name: fullName,
+                    email: email,
+                    phone: phone,
+                    address: address,
+                    gender: gender,
+                    country: country,
+                }, { merge: true }); // merge: true sẽ cập nhật dữ liệu mà không xóa dữ liệu hiện có
+                Alert.alert("Thành công", "Cập nhật thông tin thành công!");
+                // Có thể thêm thông báo cho người dùng tại đây
+            }
+        } catch (error) {
+            Alert.alert("Thất bại", "Cập nhật thông tin thất bại!");
+        }
+    };
 
     return (
         <View style={styles.containerbox}>
@@ -40,13 +90,6 @@ const EditProfileScreen = () => {
                     label="Họ và tên"
                     value={fullName}
                     onChangeText={text => setFullName(text)}
-                    style={styles.input}
-                    underlineColor="transparent"
-                />
-                <TextInput
-                    label="Tên bí danh"
-                    value={username}
-                    onChangeText={text => setUsername(text)}
                     style={styles.input}
                     underlineColor="transparent"
                 />
@@ -66,8 +109,7 @@ const EditProfileScreen = () => {
                     keyboardType="phone-pad"
                     underlineColor="transparent"
                 />
-
-                <View style={[styles.dropdownRow, styles.input]}>
+                <View style={[styles.dropdownRow, { zIndex: openCountry ? 2000 : 1000 }]}>
                     <DropDownPicker
                         open={openCountry}
                         value={country}
@@ -76,8 +118,9 @@ const EditProfileScreen = () => {
                         setValue={setCountry}
                         placeholder="Đất nước"
                         style={styles.dropdown}
-                        containerStyle={{ flex: 1 }}
+                        containerStyle={{ flex: 1, zIndex: 2000 }}  // Ensure high zIndex for country dropdown
                     />
+
                     <DropDownPicker
                         open={openGender}
                         value={gender}
@@ -86,26 +129,24 @@ const EditProfileScreen = () => {
                         setValue={setGender}
                         placeholder="Giới tính"
                         style={styles.dropdown}
-                        containerStyle={{ flex: 1, marginLeft: 10 }}
+                        containerStyle={{ flex: 1, marginLeft: 10, zIndex: 1000 }}  // Ensure lower zIndex for gender dropdown
                     />
                 </View>
-
-
                 <TextInput
                     label="Địa chỉ"
                     value={address}
                     onChangeText={text => setAddress(text)}
-                    style={styles.input}
+                    style={[styles.input, { zIndex: 500 }]}  // Ensure the address field is below the dropdown
                     underlineColor="transparent"
                 />
-
-                <Button mode="contained" onPress={() => console.log('Chỉnh sửa xong')} style={styles.button}>
-                    CHỈNH SỬA XONG
+                <Button mode="contained" onPress={handleUpdateProfile} style={styles.button}>
+                    Cập nhật
                 </Button>
             </ScrollView>
         </View>
     );
 };
+
 
 const styles = StyleSheet.create({
     containerbox: {

@@ -1,122 +1,123 @@
-import { StyleSheet, Text, View, Image, Button, TouchableOpacity } from "react-native"
-import { ImagesAssets } from "../../assets/images/ImagesAssets"
-import { globalFont } from "../../utils/const"
+import React from 'react';
+import { StyleSheet, Text, View, Image, TouchableOpacity } from "react-native";
+import { ImagesAssets } from "../../assets/images/ImagesAssets";
+import { globalFont } from "../../utils/const";
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { NavigationProp, useNavigation } from "@react-navigation/native";
-import {
-    GoogleSignin,
-    GoogleSigninButton,
-    isErrorWithCode,
-    statusCodes,
-  } from '@react-native-google-signin/google-signin';
-  GoogleSignin.configure({
-    webClientId: '1043874943091-q6sc9588lul637gjhqhinq0vlg4923sc.apps.googleusercontent.com', // client ID of type WEB for your server. Required to get the `idToken` on the user object, and for offline access.
-    scopes: ['https://www.googleapis.com/auth/drive.readonly'], // what API you want to access on behalf of the user, default is email and profile
-    offlineAccess: true, // if you want to access Google API on behalf of the user FROM YOUR SERVER
-    forceCodeForRefreshToken: true, // [Android] related to `serverAuthCode`, read the docs link below *.
-    iosClientId: '1043874943091-13abkutjv0ediq8ndmcc0huf1d62o17c.apps.googleusercontent.com', // [iOS] if you want to specify the client ID of type iOS (otherwise, it is taken from GoogleService-Info.plist)
-  });
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
+import { useUser } from '../home/UserContext.js';
+import { auth } from '../../firebaseConfig'; // Update this import path as needed
+import { signInWithCredential, GoogleAuthProvider } from "firebase/auth";
 
-const styles = StyleSheet.create({
-    container: {
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'center',
-        height: '100%',
-        textAlign: 'center',
-        backgroundColor: '#02929A',
-        padding: 30
-    },
-    boxlogin: {
-        display: 'flex',
-        flexDirection: 'row',
-        justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: '#fff',
-        padding: 10,
-        borderRadius: 10,
-        marginBottom: 20
-    },
-    boxloginfacebook: {
-        display: 'flex',
-        flexDirection: 'row',
-        justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: '#007AFF',
-        padding: 10,
-        borderRadius: 10,
-        marginBottom: 20
-    },
-    imagelogin: {
-        width: 30,
-        height: 30
-    },
-    textlogin: {
-        marginLeft: 20,
-        fontSize: 16,
-        fontFamily: globalFont
-    },
-    textloginfacebook: {
-        color: '#fff',
-        marginLeft: 20,
-        fontSize: 16,
-        fontFamily: globalFont
-    },
-    iconfacebook: {
-        marginLeft: 20
-    }
-})
-
+import { doc, setDoc, getDoc  } from 'firebase/firestore'; 
+import { db } from '../../firebaseConfig'; 
 
 const LoginScreen = () => {
-    const navigation: NavigationProp<RootStackParamList> = useNavigation();
-    const signIn = async () => {
 
-        try {
-          await GoogleSignin.hasPlayServices();
-          const userInfo = await GoogleSignin.signIn();
-            console.log("USer info", userInfo);
-            navigation.navigate("HomeScreen");
-        } catch (error: any) {  
-          if (isErrorWithCode(error)) {
-            switch (error.code) {
-              case statusCodes.SIGN_IN_CANCELLED:
-                console.log("Error: ", error);
-    
-                break;
-              case statusCodes.IN_PROGRESS:
-                console.log("Error: ", error);
-    
-                break;
-                case statusCodes.PLAY_SERVICES_NOT_AVAILABLE:
-                    console.log("Error: ", error);
-    
-                    break;
-              default:
-                console.log("Error: ", error);
-    
-            }
-          } else {
-            console.log("Error: ", error);
-    
-          }
-        }
+  const navigation: NavigationProp<RootStackParamList> = useNavigation();
+  const { setUserInfo } = useUser();
+
+  const signIn = async () => {
+    try {
+      GoogleSignin.configure({
+        webClientId: '205669129959-j7hjsdpbslrqibpr6aunaujbis4ahpm5.apps.googleusercontent.com',
+      });
+      const data = await GoogleSignin.signIn();
+      setUserInfo(data); // Lưu thông tin người dùng
+
+      const idToken = data.data?.idToken; // Sử dụng optional chaining để lấy idToken
+
+
+      const credential = GoogleAuthProvider.credential(idToken);
+      const userCredential = await signInWithCredential(auth, credential);
+      const user = userCredential.user;
+      const userRef = doc(db, 'Users', user.uid);
+      const userSnapshot = await getDoc(userRef);
+  
+      // Check if the user exists before setting data
+      if (!userSnapshot.exists()) {
+        // Only add data if the user does not already exist
+        await setDoc(userRef, {
+          uid: user.uid,
+          name: user.displayName || '', // Tên người dùng từ Google hoặc mặc định 'Anonymous'
+          email: user.email,
+          gender: user.gender || '', // Bạn có thể sửa lại vì Google không trả về giới tính
+          country: user.country || '', // Bạn có thể sửa lại vì Google không trả về quốc gia
+          phone: user.phoneNumber || '', // Số điện thoại từ Google, có thể không có
+          address: '', // Địa chỉ mặc định là rỗng, người dùng có thể cập nhật sau
+        });
+        console.log("User added to Firestore");
+      } else {
+        console.log("User already exists in Firestore");
+      }
+      navigation.navigate("HomeScreen"); // Chuyển hướng sau khi đăng nhập
+    } catch (error) {
+      console.error("Sign-in error: ", error);
     }
-    return (
-        <View style={styles.container}>
-            <TouchableOpacity style={styles.boxlogin} onPress={signIn}>
-            <Image
-                source={ImagesAssets.imagegg}
-                style={styles.imagelogin}
-            />
-            <Text  style={styles.textlogin}>Đăng nhập bằng Google</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.boxloginfacebook} onPress={()=> navigation.navigate("HomeScreen")}>
-            <Ionicons name="logo-facebook" size={30} color="white" style={styles.iconfacebook} />
-            <Text  style={styles.textloginfacebook}>Đăng nhập bằng Facebook</Text>
-            </TouchableOpacity>
-        </View>
-    )
-}
+  };
+
+  return (
+    <View style={styles.container}>
+      <TouchableOpacity style={styles.boxlogin} onPress={signIn}>
+        <Image source={ImagesAssets.imagegg} style={styles.imagelogin} />
+        <Text style={styles.textlogin}>Đăng nhập bằng Google</Text>
+      </TouchableOpacity>
+      <TouchableOpacity style={styles.boxloginfacebook} onPress={() => navigation.navigate("HomeScreen")}>
+        <Ionicons name="logo-facebook" size={30} color="white" style={styles.iconfacebook} />
+        <Text style={styles.textloginfacebook}>Đăng nhập bằng Facebook</Text>
+      </TouchableOpacity>
+    </View>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    display: 'flex',
+    flexDirection: 'column',
+    justifyContent: 'center',
+    height: '100%',
+    textAlign: 'center',
+    backgroundColor: '#02929A',
+    padding: 30,
+  },
+  boxlogin: {
+    display: 'flex',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    padding: 10,
+    borderRadius: 10,
+    marginBottom: 20,
+  },
+  boxloginfacebook: {
+    display: 'flex',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#007AFF',
+    padding: 10,
+    borderRadius: 10,
+    marginBottom: 20,
+  },
+  imagelogin: {
+    width: 30,
+    height: 30,
+  },
+  textlogin: {
+    marginLeft: 20,
+    fontSize: 16,
+    fontFamily: globalFont,
+  },
+  textloginfacebook: {
+    color: '#fff',
+    marginLeft: 20,
+    fontSize: 16,
+    fontFamily: globalFont,
+  },
+  iconfacebook: {
+    marginLeft: 20,
+  },
+});
 
 export default LoginScreen;
