@@ -6,8 +6,7 @@ import { globalFont } from '../../utils/const';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { NavigationProp, useNavigation } from '@react-navigation/native';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { db } from '../../firebaseConfig';
-import { auth } from '../../firebaseConfig'; // Firebase Auth để lấy thông tin user hiện tại
+import { auth, db } from '../../fireBaseConfig'; // Firebase Auth để lấy thông tin user hiện tại
 
 const EditProfileScreen = () => {
     const [fullName, setFullName] = useState('');
@@ -85,7 +84,7 @@ const EditProfileScreen = () => {
         <View style={styles.containerbox}>
             <Ionicons name="arrow-back" size={30} color="white" onPress={() => navigation.goBack()} />
             <Text style={styles.textbox}>Chỉnh sửa thông tin cá nhân</Text>
-            <ScrollView contentContainerStyle={styles.container}>
+            <View contentContainerStyle={styles.container}>
                 <TextInput
                     label="Họ và tên"
                     value={fullName}
@@ -142,7 +141,7 @@ const EditProfileScreen = () => {
                 <Button mode="contained" onPress={handleUpdateProfile} style={styles.button}>
                     Cập nhật
                 </Button>
-            </ScrollView>
+            </View>
         </View>
     );
 };
@@ -187,7 +186,7 @@ const styles = StyleSheet.create({
 
         flexDirection: 'row',
         justifyContent: 'space-between',
-        marginBottom: 10,
+        marginBottom: 30,
     },
     dropdown: {
         height: 50,

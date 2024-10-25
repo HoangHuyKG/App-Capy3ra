@@ -14,5 +14,7 @@ type RootStackParamList = {
     CreateCourseScreen: undefined;
     ReviewCourseScreen: undefined;
     EditVocabularyScreen: undefined;
+    Editcourevocalbulary: undefined;
     VocabularyCard: undefined;
+    CourseScreen: undefined;
 }

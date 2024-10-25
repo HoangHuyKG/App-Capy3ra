@@ -36,7 +36,6 @@ const styles = StyleSheet.create({
 const AppHeader = () => {
     const navigation: any = useNavigation();
     const { userInfo } = useUser();
-    console.log(userInfo)
     return (
         <View style={styles.container}>
             <View style={styles.menu} >

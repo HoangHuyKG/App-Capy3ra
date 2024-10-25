@@ -6,12 +6,24 @@ import { globalFont } from '../../utils/const';
 import { ImagesAssets } from '../../assets/images/ImagesAssets';
 import { NavigationProp, useNavigation, useRoute } from '@react-navigation/native';
 import VocabularyCard from '../modal/modal.vocabularycard';
-
+import { useUser } from './UserContext';
 const ReviewCourseScreen = () => {
     const navigation: NavigationProp<RootStackParamList> = useNavigation();
     const route = useRoute();
     const { course } = route.params; // Lấy dữ liệu từ params
+
+    // Kiểm tra nếu course không tồn tại
+    if (!course) {
+        return (
+            <View style={styles.container}>
+                <Text>Course data is not available.</Text>
+            </View>
+        );
+    }
+
     const [modalVisible, setModalVisible] = useState(false);
+    const { userInfo } = useUser();
+    const currentUserId = userInfo?.data?.user?.id;
 
     return (
         <View style={styles.container}>
@@ -26,21 +38,18 @@ const ReviewCourseScreen = () => {
                             style={styles.avatar}
                         />
                         <Text style={styles.creatorName}>{course.created_by}</Text>
-                        <TouchableOpacity style={styles.buttonstudy} onPress={() => setModalVisible(true)}>
-                            <Text style={styles.textbutton}>Bắt đầu học</Text>
-                        </TouchableOpacity>
+                        {currentUserId === course.idUser ? (
+                            <TouchableOpacity style={styles.buttonstudy} onPress={() => navigation.navigate("EditCourseVocabulary")}>
+                                <Text style={styles.textbutton}>Chỉnh sửa khóa học</Text>
+                            </TouchableOpacity>
+                        ) : (
+                            <TouchableOpacity style={styles.buttonstudy} onPress={() => setModalVisible(true)}>
+                                <Text style={styles.textbutton}>Bắt đầu học</Text>
+                            </TouchableOpacity>
+                        )}
                     </View>
                 </View>
                 <VocabularyCard modalVisible={modalVisible} setModalVisible={setModalVisible} />
-                {/* Days */}
-                <View style={styles.daySection}>
-                    {["Ngày 1", "Ngày 2", "Ngày 3", "Ngày 4"].map((day, index) => (
-                        <TouchableOpacity key={index} style={styles.dayCard} onPress={() => navigation.navigate("DetailVocabularyDay")}>
-                            <Image source={ImagesAssets.logodetail} style={styles.dayImage} />
-                            <Text style={styles.textimage}>{day}</Text>
-                        </TouchableOpacity>
-                    ))}
-                </View>
             </ScrollView>
         </View>
     );

@@ -17,6 +17,8 @@ import DetailVocabularyDay from '../home/detailvocabularyday';
 import CreateCourseScreen from '../home/createcourse';
 import ReviewCourseScreen from '../home/reviewcourse';
 import EditVocabularyScreen from '../home/editvocalbulary';
+import editcourevocalbulary from '../home/editcourevocalbulary';
+import Editcourevocalbulary from '../home/editcourevocalbulary';
 
 
 const Stack = createNativeStackNavigator();
@@ -41,6 +43,8 @@ const StackNavigator = () => {
       <Stack.Screen name="CreateCourseScreen" component={CreateCourseScreen} />
       <Stack.Screen name="ReviewCourseScreen" component={ReviewCourseScreen} />
       <Stack.Screen name="EditVocabularyScreen" component={EditVocabularyScreen} />
+      <Stack.Screen name="Editcourevocalbulary" component={Editcourevocalbulary} />
+      <Stack.Screen name="CourseScreen" component={CourseScreen} />
 
     </Stack.Navigator>
   );

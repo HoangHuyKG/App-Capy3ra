@@ -1,10 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, Image, StyleSheet } from 'react-native';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { ImagesAssets } from '../../assets/images/ImagesAssets';
 import AntDesign from '@expo/vector-icons/AntDesign';
-import { db } from '../../firebaseConfig';
-import { collection, getDocs } from 'firebase/firestore';
+import { db } from '../../fireBaseConfig';
+import { collection, onSnapshot } from 'firebase/firestore'; // Import onSnapshot
 import { TouchableOpacity } from 'react-native-gesture-handler';
 import { NavigationProp, useNavigation } from '@react-navigation/native';
 import { format } from 'date-fns'; // Thư viện để định dạng ngày giờ
@@ -14,21 +13,17 @@ const CourseItem = () => {
   const navigation: NavigationProp<any> = useNavigation();
 
   useEffect(() => {
-    const fetchCourses = async () => {
-      try {
-        const querySnapshot = await getDocs(collection(db, 'Courses'));
-        const coursesData = querySnapshot.docs.map(doc => {
-          const data = doc.data();
-          const createdAt = data.createdAt ? data.createdAt.toDate() : null; // Chuyển đổi timestamp sang dạng Date
-          return { id: doc.id, ...data, createdAt };
-        });
-        setCourses(coursesData);
-      } catch (error) {
-        console.error("Error fetching courses: ", error);
-      }
-    };
-    
-    fetchCourses();
+    const unsubscribe = onSnapshot(collection(db, 'Courses'), (snapshot) => {
+      const coursesData = snapshot.docs.map(doc => {
+        const data = doc.data();
+        const createdAt = data.createdAt ? data.createdAt.toDate() : null; // Chuyển đổi timestamp sang dạng Date
+        return { id: doc.id, ...data, createdAt };
+      });
+      setCourses(coursesData); // Cập nhật state với dữ liệu mới
+    });
+
+    // Cleanup khi component bị unmount để tránh memory leaks
+    return () => unsubscribe();
   }, []);
 
   return (
@@ -36,7 +31,7 @@ const CourseItem = () => {
       {courses.length > 0 ? (
         courses.map(course => (
           <View key={course.id} style={styles.cardContainer}>
-            <TouchableOpacity onPress={() => navigation.navigate("ReviewCourseScreen" , { course })}>
+            <TouchableOpacity onPress={() => navigation.navigate("ReviewCourseScreen", { course })}>
               <View style={styles.header}>
                 <Image
                   source={{ uri: course.imageUrl || 'https://via.placeholder.com/150' }}

@@ -9,7 +9,7 @@ import React from "react";
 import { ImagesAssets } from "../../assets/images/ImagesAssets";
 import { NavigationProp, useNavigation, useRoute } from "@react-navigation/native";
 import { useUser } from "./UserContext";
-import { auth } from '../../firebaseConfig'; // Đảm bảo đường dẫn này đúng
+import { auth } from '../../fireBaseConfig'; // Đảm bảo đường dẫn này đúng
 
 const styles = StyleSheet.create({
     container: {

@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, TextInput, View, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import AppHeader from '../navigation/app.header';
-import { db } from '../../firebaseConfig';
+import { db } from '../../fireBaseConfig';
 import { globalFont } from '../../utils/const';
-import { collection, addDoc } from 'firebase/firestore';
+import { collection, addDoc, onSnapshot } from 'firebase/firestore';
 import { useUser } from './UserContext';
+import { NavigationProp, useNavigation } from '@react-navigation/native';
 
 const CreateCourseScreen = () => {
     const { userInfo } = useUser(); // Lấy userInfo từ context
@@ -13,13 +14,29 @@ const CreateCourseScreen = () => {
     const [createdBy, setCreatedBy] = useState('');
     const [description, setDescription] = useState('');
     const [language, setLanguage] = useState('');
-    const [level, setLevel] = useState('');
     const [title, setTitle] = useState('');
     const [imageUrl, setImageUrl] = useState('');
+    const [courses, setCourses] = useState([]); // State để lưu các khóa học real-time
     const [imageUser, setImageUser] = useState(userInfo?.data?.user?.photo || ''); // Đặt giá trị ban đầu đúng
+    const [idUser, setidUser] = useState(userInfo?.data?.user?.id || ''); // Đặt giá trị ban đầu đúng
+    const navigation: NavigationProp<RootStackParamList> = useNavigation();
+
+    // Sử dụng onSnapshot để lắng nghe real-time
+    useEffect(() => {
+        const unsubscribe = onSnapshot(collection(db, 'Courses'), (snapshot) => {
+            const newCourses = snapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data()
+            }));
+            setCourses(newCourses); // Cập nhật state với dữ liệu mới
+        });
+
+        // Cleanup subscription khi component bị unmount
+        return () => unsubscribe();
+    }, []);
 
     const handleCreateCourse = async () => {
-        if (!courseId || !createdBy || !description || !language || !level || !title || !imageUrl || !imageUser) {
+        if (!courseId || !createdBy || !description || !language || !title || !imageUrl || !imageUser || !idUser) {
             Alert.alert("Lỗi", "Vui lòng điền đầy đủ thông tin");
             return;
         }
@@ -30,21 +47,22 @@ const CreateCourseScreen = () => {
                 created_by: createdBy,
                 description,
                 language,
-                level,
                 title,
                 imageUrl,
                 imageUser, // Lưu URL ảnh vào Firestore
-                createdAt: new Date()
+                createdAt: new Date(),
+                idUser,
             });
             Alert.alert("Thành công", "Khóa học đã được tạo thành công");
+            navigation.navigate("CourseScreen");
             setCourseId('');
             setCreatedBy('');
             setDescription('');
             setLanguage('');
-            setLevel('');
             setTitle('');
             setImageUrl('');
             setImageUser('');
+            setidUser('');
         } catch (error) {
             Alert.alert("Lỗi", "Không thể tạo khóa học, vui lòng thử lại");
             console.error(error);
@@ -56,6 +74,7 @@ const CreateCourseScreen = () => {
             <AppHeader />
             <ScrollView style={styles.containerbox}>
                 <View style={styles.formContainer}>
+                    {/* Form tạo khóa học */}
                     <Text style={styles.label}>Mã khóa học</Text>
                     <TextInput
                         style={styles.input}
@@ -96,14 +115,6 @@ const CreateCourseScreen = () => {
                         </Picker>
                     </View>
 
-                    <Text style={styles.label}>Cấp độ</Text>
-                    <TextInput
-                        style={styles.input}
-                        placeholder="Nhập cấp độ (ví dụ: 1, 2, 3)"
-                        value={level}
-                        onChangeText={setLevel}
-                    />
-
                     <Text style={styles.label}>Tiêu đề</Text>
                     <TextInput
                         style={styles.input}
@@ -124,10 +135,15 @@ const CreateCourseScreen = () => {
                         <Text style={styles.buttonText}>Tạo khóa học</Text>
                     </TouchableOpacity>
                 </View>
+
+
             </ScrollView>
         </View>
     );
 };
+
+
+
 
 const styles = StyleSheet.create({
     container: {
