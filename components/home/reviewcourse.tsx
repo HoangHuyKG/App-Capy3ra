@@ -7,6 +7,7 @@ import { ImagesAssets } from '../../assets/images/ImagesAssets';
 import { NavigationProp, useNavigation, useRoute } from '@react-navigation/native';
 import VocabularyCard from '../modal/modal.vocabularycard';
 import { useUser } from './UserContext';
+import AddLessonModal from '../modal/modal.addlession';
 const ReviewCourseScreen = () => {
     const navigation: NavigationProp<RootStackParamList> = useNavigation();
     const route = useRoute();
@@ -22,6 +23,7 @@ const ReviewCourseScreen = () => {
     }
 
     const [modalVisible, setModalVisible] = useState(false);
+    const [modalVisibleadd, setModalVisibleadd] = useState(false);
     const { userInfo } = useUser();
     const currentUserId = userInfo?.data?.user?.id;
 
@@ -39,8 +41,8 @@ const ReviewCourseScreen = () => {
                         />
                         <Text style={styles.creatorName}>{course.created_by}</Text>
                         {currentUserId === course.idUser ? (
-                            <TouchableOpacity style={styles.buttonstudy} onPress={() => navigation.navigate("EditCourseVocabulary")}>
-                                <Text style={styles.textbutton}>Chỉnh sửa khóa học</Text>
+                            <TouchableOpacity style={styles.buttonstudy} onPress={() => setModalVisibleadd(true)}>
+                                <Text style={styles.textbutton}>Thêm bài học</Text>
                             </TouchableOpacity>
                         ) : (
                             <TouchableOpacity style={styles.buttonstudy} onPress={() => setModalVisible(true)}>
@@ -49,7 +51,20 @@ const ReviewCourseScreen = () => {
                         )}
                     </View>
                 </View>
+                {/* Days */}
+                <View style={styles.daySection}>
+                    {["Ngày 1", "Ngày 2", "Ngày 3", "Ngày 4"].map((day, index) => (
+                        <TouchableOpacity key={index} style={styles.dayCard} onPress={() => navigation.navigate("DetailVocabularyDay")}>
+                            <Image
+                                source={ImagesAssets.logodetail}
+                                style={styles.dayImage}
+                            />
+                            <Text style={styles.textimage}>{day}</Text>
+                        </TouchableOpacity>
+                    ))}
+                </View>
                 <VocabularyCard modalVisible={modalVisible} setModalVisible={setModalVisible} />
+                <AddLessonModal modalVisible={modalVisibleadd} setModalVisible={setModalVisibleadd}/>
             </ScrollView>
         </View>
     );
