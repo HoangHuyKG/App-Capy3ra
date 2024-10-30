@@ -1,13 +1,15 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, Image, ProgressBarAndroid, TouchableOpacity, ScrollView } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView } from 'react-native';
 import AppHeader from '../navigation/app.header';
-import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { globalFont } from '../../utils/const';
 import { ImagesAssets } from '../../assets/images/ImagesAssets';
 import { NavigationProp, useNavigation, useRoute } from '@react-navigation/native';
 import VocabularyCard from '../modal/modal.vocabularycard';
 import { useUser } from './UserContext';
 import AddLessonModal from '../modal/modal.addlession';
+import { db } from '../../fireBaseConfig'; // Import cấu hình Firebase
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
+
 const ReviewCourseScreen = () => {
     const navigation: NavigationProp<RootStackParamList> = useNavigation();
     const route = useRoute();
@@ -17,15 +19,32 @@ const ReviewCourseScreen = () => {
     if (!course) {
         return (
             <View style={styles.container}>
-                <Text>Course data is not available.</Text>
+                <Text>Không có dữ liệu khóa học.</Text>
             </View>
         );
     }
 
     const [modalVisible, setModalVisible] = useState(false);
     const [modalVisibleadd, setModalVisibleadd] = useState(false);
+    const [lessons, setLessons] = useState([]); // Dữ liệu bài học
     const { userInfo } = useUser();
     const currentUserId = userInfo?.data?.user?.id;
+
+    // Lấy courseId từ course
+    const courseId = course.id; // Hoặc course.courseId tùy thuộc vào cách bạn định nghĩa course
+
+    // Lắng nghe dữ liệu bài học theo courseId
+    useEffect(() => {
+        const lessonsRef = collection(db, 'Lessons');
+        const q = query(lessonsRef, where('courseId', '==', courseId));
+        
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            const lessonsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            setLessons(lessonsData);
+        });
+
+        return () => unsubscribe(); // Hủy đăng ký khi component unmount
+    }, [courseId]);
 
     return (
         <View style={styles.container}>
@@ -33,7 +52,7 @@ const ReviewCourseScreen = () => {
             <ScrollView style={styles.container}>
                 <View style={styles.header}>
                     <Text style={styles.headerText}>{course.title}</Text>
-                    <Text style={styles.subHeaderText}>{course.description}</Text> 
+                    <Text style={styles.subHeaderText}>{course.description}</Text>
                     <View style={styles.creator}>
                         <Image
                             source={{ uri: course.imageUser || 'https://randomuser.me/api/portraits/women/44.jpg' }}
@@ -51,20 +70,28 @@ const ReviewCourseScreen = () => {
                         )}
                     </View>
                 </View>
-                {/* Days */}
+                {/* Hiển thị danh sách bài học */}
                 <View style={styles.daySection}>
-                    {["Ngày 1", "Ngày 2", "Ngày 3", "Ngày 4"].map((day, index) => (
-                        <TouchableOpacity key={index} style={styles.dayCard} onPress={() => navigation.navigate("DetailVocabularyDay")}>
+                    {lessons.length > 0 ? (
+                        lessons.map((lesson) => (
+                        <TouchableOpacity 
+                            key={lesson.id} 
+                            style={styles.dayCard} 
+                            onPress={() => navigation.navigate("DetailVocabularyDay", { lessonId: lesson.id })} // Truyền lessonId qua params
+                        >
                             <Image
                                 source={ImagesAssets.logodetail}
                                 style={styles.dayImage}
                             />
-                            <Text style={styles.textimage}>{day}</Text>
+                            <Text style={styles.textimage}>{lesson.title}</Text>
                         </TouchableOpacity>
-                    ))}
+                        ))
+                    ) : (
+                        <Text style={styles.noLessonsText}>Chưa có bài học nào.</Text>
+                    )}
                 </View>
                 <VocabularyCard modalVisible={modalVisible} setModalVisible={setModalVisible} />
-                <AddLessonModal modalVisible={modalVisibleadd} setModalVisible={setModalVisibleadd}/>
+                <AddLessonModal modalVisible={modalVisibleadd} setModalVisible={setModalVisibleadd} courseId={courseId} />
             </ScrollView>
         </View>
     );
@@ -75,58 +102,16 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: '#e6f4f5',
     },
-    boxbutton: {
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-flexDirection: 'row'
-    },
     buttonstudy: {
         backgroundColor: "#25B212",
         padding: 10,
         borderRadius: 10,
-
     },
     textbutton: {
         color: "#fff",
         fontFamily: globalFont,
         fontSize: 14,
         fontWeight: "bold"
-    },
-    button: {
-        padding: 15,
-        backgroundColor: '#e6f4f5',
-        borderRadius: 10,
-        margin: 10
-    },
-    box: {
-        backgroundColor: '#fff',
-        padding: 20,
-        margin: 10,
-        borderRadius: 10,
-    },
-    buttontext: {
-        fontFamily: globalFont,
-        fontSize: 14,
-        fontWeight: '500'
-    },
-    progressBarContainer: {
-        marginTop: 10,
-        shadowColor: '#cfd3d3',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.3,
-        shadowRadius: 4,
-        elevation: 5,
-        borderRadius: 7.5,
-        backgroundColor: '#cfd3d3',
-        marginBottom: 15,
-    },
-    progressBar: {
-        width: '100%',
-        height: 15,
-        backgroundColor: '#cfd3d3',
-        borderRadius: 7.5,
-        overflow: 'hidden',
     },
     header: {
         borderTopWidth: 1,
@@ -160,21 +145,6 @@ flexDirection: 'row'
     creatorName: {
         color: '#fff',
     },
-    progressSection: {
-        padding: 20,
-        alignItems: 'center',
-    },
-    progress: {
-        height: '100%',
-        width: '90%',
-        backgroundColor: '#02929A',
-    },
-    reviewButton: {
-        marginTop: 10,
-        backgroundColor: '#e0e0e0',
-        padding: 10,
-        borderRadius: 5,
-    },
     daySection: {
         flexDirection: 'row',
         justifyContent: 'space-around',
@@ -187,6 +157,7 @@ flexDirection: 'row'
         borderRadius: 10,
         alignItems: 'center',
         marginBottom: 20,
+        width: '45%', // Đặt chiều rộng của card bài học
     },
     dayImage: {
         backgroundColor: '#F2F2F7',
@@ -199,6 +170,13 @@ flexDirection: 'row'
         fontWeight: '600',
         fontSize: 14,
         marginTop: 10,
+        textAlign: 'center', // Căn giữa văn bản
+    },
+    noLessonsText: {
+        fontSize: 16,
+        color: '#999',
+        textAlign: 'center',
+        marginTop: 20,
     }
 });
 

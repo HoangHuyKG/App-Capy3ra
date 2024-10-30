@@ -4,7 +4,7 @@ import { Picker } from '@react-native-picker/picker';
 import AppHeader from '../navigation/app.header';
 import { db } from '../../fireBaseConfig';
 import { globalFont } from '../../utils/const';
-import { collection, addDoc, onSnapshot } from 'firebase/firestore';
+import { collection, addDoc, onSnapshot, updateDoc } from 'firebase/firestore';
 import { useUser } from './UserContext';
 import { NavigationProp, useNavigation } from '@react-navigation/native';
 
@@ -36,26 +36,32 @@ const CreateCourseScreen = () => {
     }, []);
 
     const handleCreateCourse = async () => {
-        if (!courseId || !createdBy || !description || !language || !title || !imageUrl || !imageUser || !idUser) {
+        if (!createdBy || !description || !language || !title || !imageUrl || !imageUser || !idUser) {
             Alert.alert("Lỗi", "Vui lòng điền đầy đủ thông tin");
             return;
         }
-
+    
         try {
-            await addDoc(collection(db, 'Courses'), {
-                course_id: courseId,
+            
+            // Tạo tài liệu mới trong Firestore với ID tự động và nhận lại tham chiếu `docRef`
+            const docRef = await addDoc(collection(db, 'Courses'), {
                 created_by: createdBy,
                 description,
                 language,
                 title,
                 imageUrl,
-                imageUser, // Lưu URL ảnh vào Firestore
+                imageUser,
                 createdAt: new Date(),
                 idUser,
             });
+    
+            // Sử dụng `updateDoc` để cập nhật trường `course_id` với ID tài liệu tự động tạo
+            await updateDoc(docRef, { courseId: docRef.id });
+    
             Alert.alert("Thành công", "Khóa học đã được tạo thành công");
             navigation.navigate("CourseScreen");
-            setCourseId('');
+    
+            // Đặt lại các trường nhập liệu về giá trị ban đầu
             setCreatedBy('');
             setDescription('');
             setLanguage('');
@@ -68,20 +74,14 @@ const CreateCourseScreen = () => {
             console.error(error);
         }
     };
+    
 
     return (
         <View style={styles.container}>
             <AppHeader />
             <ScrollView style={styles.containerbox}>
                 <View style={styles.formContainer}>
-                    {/* Form tạo khóa học */}
-                    <Text style={styles.label}>Mã khóa học</Text>
-                    <TextInput
-                        style={styles.input}
-                        placeholder="Nhập mã khóa học"
-                        value={courseId}
-                        onChangeText={setCourseId}
-                    />
+                  
 
                     <Text style={styles.label}>Người tạo</Text>
                     <TextInput

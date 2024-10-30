@@ -1,28 +1,53 @@
-import React, { useState } from 'react';
-import { Modal, View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { Modal, View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { Button } from 'react-native-paper';
 import { globalFont } from '../../utils/const';
+import { db } from '../../fireBaseConfig'; // Import cấu hình Firebase
+import { collection, query, where, onSnapshot, setDoc, doc } from 'firebase/firestore';
 
-const AddLessonModal = ({ modalVisible, setModalVisible }) => {
-  const [lessonId, setLessonId] = useState('');
-  const [courseId, setCourseId] = useState('');
+const AddLessonModal = ({ modalVisible, setModalVisible, courseId }) => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const [lessons, setLessons] = useState([]);
 
-  const handleAddLesson = () => {
-    if (lessonId && courseId && title && description) {
-      // Logic xử lý thêm bài học (lưu trữ local hoặc xử lý khác)
-      console.log({
-        lessonId,
-        courseId,
-        title,
-        description,
-      });
-      setModalVisible(false);
-      setLessonId('');
-      setCourseId('');
-      setTitle('');
-      setDescription('');
+  // Lắng nghe real-time cho collection Lessons với courseId
+  useEffect(() => {
+    const lessonsRef = collection(db, 'Lessons');
+    const q = query(lessonsRef, where('courseId', '==', courseId)); // Lấy bài học theo courseId
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const lessonsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setLessons(lessonsData);
+    });
+
+    return () => unsubscribe(); // Hủy đăng ký khi component unmount
+  }, [courseId]); // Thêm courseId vào dependency array
+
+  const handleAddLesson = async () => {
+    if (title && courseId && description) {
+      try {
+        // Tạo ID bài học tự động
+        const lessonId = `lesson_${Date.now()}`;
+  
+        // Dữ liệu bài học, bao gồm lessonId
+        const lessonData = {
+          lessonId,  // Thêm lessonId vào dữ liệu
+          courseId,  // Sử dụng courseId từ props
+          title,
+          description,
+          createdAt: new Date(), // Thêm trường createdAt nếu cần
+        };
+  
+        // Thêm tài liệu vào Firestore với ID cụ thể
+        await setDoc(doc(db, 'Lessons', lessonId), lessonData);
+  
+        // Đóng modal và reset trường nhập liệu
+        setModalVisible(false);
+        setTitle('');
+        setDescription('');
+      } catch (error) {
+        alert('Lỗi khi thêm bài học: ' + error.message);
+      }
     } else {
       alert('Vui lòng điền đầy đủ thông tin');
     }
@@ -33,18 +58,6 @@ const AddLessonModal = ({ modalVisible, setModalVisible }) => {
       <View style={styles.modalOverlay}>
         <View style={styles.modalContent}>
           <Text style={styles.title}>Thêm bài học</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Mã bài học"
-            value={lessonId}
-            onChangeText={setLessonId}
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="Mã khóa học"
-            value={courseId}
-            onChangeText={setCourseId}
-          />
           <TextInput
             style={styles.input}
             placeholder="Tiêu đề bài học"
@@ -65,6 +78,9 @@ const AddLessonModal = ({ modalVisible, setModalVisible }) => {
               <Text style={styles.buttontext}>Hủy</Text>
             </Button>
           </View>
+          
+       
+         
         </View>
       </View>
     </Modal>
@@ -113,6 +129,22 @@ const styles = StyleSheet.create({
     backgroundColor: "#02929A",
     flex: 1,
     marginHorizontal: 5,
+  },
+  lessonsContainer: {
+    marginTop: 20,
+    width: '100%',
+  },
+  lessonsTitle: {
+    fontWeight: 'bold',
+    marginBottom: 10,
+  },
+  lessonItem: {
+    padding: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#ccc',
+  },
+  lessonTitle: {
+    fontWeight: 'bold',
   },
 });
 

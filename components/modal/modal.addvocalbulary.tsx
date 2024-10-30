@@ -1,38 +1,54 @@
 import React, { useState } from 'react';
-import { Modal, View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
+import { Modal, View, Text, TextInput, StyleSheet } from 'react-native';
 import { Button } from 'react-native-paper';
 import DropDownPicker from 'react-native-dropdown-picker';
 import { globalFont } from '../../utils/const';
+import { db } from '../../fireBaseConfig';
+import { collection, setDoc, doc } from 'firebase/firestore';
 
-const AddVocabularyModal = ({ modalVisible, setModalVisible }) => {
+const AddVocabularyModal = ({ modalVisible, setModalVisible, lessonId }) => {
   const [englishWord, setEnglishWord] = useState('');
   const [vietnameseWord, setVietnameseWord] = useState('');
   const [wordType, setWordType] = useState('');
   const [openWordType, setOpenWordType] = useState(false);
 
   const [wordTypes] = useState([
-    { label: 'Danh từ', value: 'noun' },
-    { label: 'Động từ', value: 'verb' },
-    { label: 'Tính từ', value: 'adjective' },
-    { label: 'Trạng từ', value: 'adverb' },
+    { label: 'Danh từ', value: 'Danh từ' },
+    { label: 'Động từ', value: 'Động từ' },
+    { label: 'Tính từ', value: 'Tính từ' },
+    { label: 'Trạng từ', value: 'Trạng từ' },
   ]);
 
-  const handleAddWord = () => {
-    if (englishWord && vietnameseWord && wordType) {
-      // Logic xử lý thêm từ vựng (bạn có thể lưu trữ local hoặc xử lý khác)
-      console.log({
-        englishWord,
-        vietnameseWord,
-        wordType,
-      });
-      setModalVisible(false);
-      setEnglishWord('');
-      setVietnameseWord('');
-      setWordType('');
+  const handleAddWord = async () => {
+    
+  
+    if (englishWord && vietnameseWord && wordType && lessonId) {
+      try {
+        const wordId = `vocab_${Date.now()}`;
+  
+        const vocabularyData = {
+          wordId,
+          lessonId, // Đảm bảo lessonId có giá trị
+          englishWord,
+          vietnameseWord,
+          wordType,
+          createdAt: new Date(),
+        };
+  
+        await setDoc(doc(db, 'Vocabularies', wordId), vocabularyData);
+  
+        setModalVisible(false);
+        setEnglishWord('');
+        setVietnameseWord('');
+        setWordType('');
+      } catch (error) {
+        alert('Lỗi khi thêm từ vựng: ' + error.message);
+      }
     } else {
-      alert('Vui lòng điền đầy đủ thông tin');
+      alert('Vui lòng điền đầy đủ thông tin và chắc chắn rằng lessonId không bị thiếu');
     }
   };
+  
 
   return (
     <Modal visible={modalVisible} animationType="slide" transparent={true}>
@@ -65,7 +81,7 @@ const AddVocabularyModal = ({ modalVisible, setModalVisible }) => {
               <Text style={styles.buttontext}>Thêm</Text>
             </Button>
             <Button mode="outlined" onPress={() => setModalVisible(false)} style={styles.button}>
-                <Text style={styles.buttontext}>Hủy</Text>
+              <Text style={styles.buttontext}>Hủy</Text>
             </Button>
           </View>
         </View>

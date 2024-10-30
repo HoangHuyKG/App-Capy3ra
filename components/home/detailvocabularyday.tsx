@@ -1,82 +1,123 @@
-    import React, { useState } from 'react';
-    import { View, Text, Image, FlatList, TouchableOpacity, StyleSheet } from 'react-native';
-    import { ImagesAssets } from '../../assets/images/ImagesAssets';
-    import { NavigationProp, useNavigation } from '@react-navigation/native';
-    import AppHeader from '../navigation/app.header';
-    import { globalFont } from '../../utils/const';
-    import Ionicons from '@expo/vector-icons/Ionicons';
-    import AntDesign from '@expo/vector-icons/AntDesign';
-    import { Button } from 'react-native-paper';
-    import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
-    import AddVocabularyModal from '../modal/modal.addvocalbulary';
+import React, { useEffect, useState } from 'react';
+import { View, Text, Image, FlatList, TouchableOpacity, StyleSheet } from 'react-native';
+import { ImagesAssets } from '../../assets/images/ImagesAssets';
+import { useRoute } from '@react-navigation/native';
+import AppHeader from '../navigation/app.header';
+import { globalFont } from '../../utils/const';
+import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
+import AddVocabularyModal from '../modal/modal.addvocalbulary';     
 
-    const data = [
-        { id: '1', en: 'thank', vn: 'cảm ơn', type: "Động từ" },
-        { id: '2', en: 'love', vn: 'yêu', type: "Động từ" },
-        { id: '3', en: 'run', vn: 'chạy', type: "Động từ" },
-        { id: '4', en: 'walk', vn: 'đi bộ', type: "Động từ" },
-        { id: '5', en: 'eat', vn: 'ăn', type: "Động từ" },
-    ];
-    const DetailVocabularyDay = () => {
-        const [modalVisible, setModalVisible] = useState(false); // Thêm state cho modal
-        const navigation: NavigationProp<RootStackParamList> = useNavigation();
-        const renderItem = ({ item }) => (
-            <View style={styles.itemContainer}>
-                <Text style={styles.columnEn}>{item.en}</Text>
-                <Text style={styles.columnVn}>{item.vn}</Text>
-                <Text style={styles.columnType}>{item.type}</Text>
+import { db } from '../../fireBaseConfig';
+import { doc, getDoc, collection, getDocs, query, where, addDoc, onSnapshot } from 'firebase/firestore';
+
+const DetailVocabularyDay = () => {
+    const [modalVisible, setModalVisible] = useState(false);
+    const [lessonData, setLessonData] = useState(null);
+    const [vocabularies, setVocabularies] = useState([]); 
+    const [loading, setLoading] = useState(true);
+    const route = useRoute();
+    const { lessonId } = route.params;
+
+    useEffect(() => {
+        const fetchLessonData = async () => {
+            try {
+                const docRef = doc(db, 'Lessons', lessonId);
+                const docSnap = await getDoc(docRef);
+                if (docSnap.exists()) {
+                    setLessonData(docSnap.data());
+                } else {
+                    console.log("No such document!");
+                }
+            } catch (error) {
+                console.error("Error fetching lesson data: ", error);
+            }
+        };
+
+        const fetchVocabularyData = () => {
+            // Lắng nghe các thay đổi trong bộ sưu tập từ vựng
+            const vocabCollection = collection(db, 'Vocabularies'); 
+            const vocabQuery = query(vocabCollection, where('lessonId', '==', lessonId)); // Lọc theo lessonId
+
+            const unsubscribe = onSnapshot(vocabQuery, (snapshot) => {
+                const vocabList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                setVocabularies(vocabList);
+            }, (error) => {
+                console.error("Error fetching vocabulary data: ", error);
+            });
+
+            return unsubscribe; // Trả về hàm hủy để ngăn lắng nghe khi component bị hủy
+        };
+
+        const fetchData = async () => {
+            setLoading(true);
+            await fetchLessonData();
+            fetchVocabularyData();
+            setLoading(false);
+        };
+
+        fetchData();
+    }, [lessonId]);
+
+    // Hàm thêm từ vựng mới
+    const addVocabulary = async (newVocabulary) => {
+        try {
+            await addDoc(collection(db, 'Vocabularies'), newVocabulary);
+        } catch (error) {
+            console.error("Error adding vocabulary: ", error);
+        }
+    };
+
+    if (loading) {
+        return <Text>Loading...</Text>;
+    }
+
+    if (!lessonData) {
+        return <Text>Không tìm thấy dữ liệu bài học.</Text>;
+    }
+
+    const renderItem = ({ item }) => (
+        <View style={styles.itemContainer}>
+            <Text style={styles.columnEn}>{item.englishWord}</Text>
+            <Text style={styles.columnVn}>{item.vietnameseWord}</Text>
+            <Text style={styles.columnType}>{item.wordType}</Text>
+        </View>
+    );
+
+    return (
+        <View style={styles.container}>
+            <AppHeader />
+            <View style={styles.containerbox}>
+                <View style={styles.header}>
+                    <View style={styles.creator}>
+                        <Image
+                            source={{ uri: 'https://randomuser.me/api/portraits/women/44.jpg' }}
+                            style={styles.avatar}
+                        />
+                        <TouchableOpacity style={styles.buttonstudya}>
+                            <TouchableOpacity style={styles.buttonboxx} onPress={()=> setModalVisible(true)}>
+                                <FontAwesome5 name="pen" size={14} color="white" />
+                                <Text style={styles.textbutton}>Thêm từ vựng</Text>
+                            </TouchableOpacity>
+                        </TouchableOpacity>
+                    </View>
+                </View>
             </View>
-        );
-
-        return (
-            <View style={styles.container}>
-                <AppHeader />
-                <View style={styles.containerbox}>
-                    <View style={styles.header}>
-                        <Text style={styles.headerTexttitle}>Bộ từ vựng AA</Text>
-                        <Text style={styles.subHeaderText}>Được biên soạn bởi Võ Hoàng Thành.</Text>
-                        <View style={styles.creator}>
-                            <Image
-                                source={{ uri: 'https://randomuser.me/api/portraits/women/44.jpg' }}
-                                style={styles.avatar}
-                            />
-                            <Text style={styles.creatorName}>Võ Hoàng Thành</Text>
-                            <TouchableOpacity style={styles.buttonstudya}>
-                                <TouchableOpacity style={styles.buttonboxx} onPress={()=> setModalVisible(true)}>
-                                    
-                            <FontAwesome5 name="pen" size={14} color="white" />
-                            <Text style={styles.textbutton}>
-                                Thêm từ vựng
-                            </Text>
-                                </TouchableOpacity>
-                        </TouchableOpacity>
+            <View style={styles.dayInfo}>
+                <Image source={ImagesAssets.logodetail} style={styles.dayImage} />
+                <View style={styles.dayInfoBox}>
+                    <Text style={styles.dayText}>{lessonData.title}</Text>
+                    <View style={styles.progressBarContainer}>
+                        <View style={styles.progressBar}>
+                            <View style={styles.progress}></View>
                         </View>
                     </View>
+                    <TouchableOpacity style={styles.buttonstudy}>
+                        <Text style={styles.reviewText}>Ôn tập</Text>
+                    </TouchableOpacity>
                 </View>
-                <View style={styles.dayInfo}>
-                    <Image
-                        source={ImagesAssets.logodetail}
-                        style={styles.dayImage}
-                    />
-                    <View style={styles.dayInfoBox}>
-                        <Text style={styles.dayText}>Ngày 1</Text>
-                        <View style={styles.progressBarContainer}>
-                            <View style={styles.progressBar}>
-                                <View style={styles.progress}></View>
-                            </View>
-                        </View>
-                        <TouchableOpacity style={styles.buttonstudy}>
-                            <Text style={styles.reviewText}>Ôn tập</Text>
-                        </TouchableOpacity>
+            </View>
 
-                    </View>
-                </View>
-
-                {/* Main Content */}
-                <View style={styles.mainContent}>
-
-                    
-                    {/* Thêm hàng tiêu đề */}
+            <View style={styles.mainContent}>
                 <View style={styles.headerRow}>
                     <View style={styles.headerColumnEn}>
                         <Text style={styles.headerText}>Tiếng Anh</Text>
@@ -90,17 +131,20 @@
                 </View>
 
                 <FlatList
-                    data={data}
+                    data={vocabularies} 
                     renderItem={renderItem}
                     keyExtractor={(item) => item.id}
                     style={styles.wordList}
                 />
-                </View>
-                <AddVocabularyModal modalVisible={modalVisible} setModalVisible={setModalVisible} />
-
             </View>
-        );
-    };
+            <AddVocabularyModal 
+                modalVisible={modalVisible} 
+                setModalVisible={setModalVisible} 
+                lessonId={lessonId}
+            />
+        </View>
+    );
+};
 
     const styles = StyleSheet.create({
 
