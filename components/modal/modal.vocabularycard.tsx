@@ -1,48 +1,133 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, Button, StyleSheet, TouchableOpacity, Image, SafeAreaView, Modal } from 'react-native';
-import { globalFont } from '../../utils/const';
+import React, { useState, useEffect, useMemo } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, Modal } from 'react-native';
 import AntDesign from '@expo/vector-icons/AntDesign';
 import { NavigationProp, useNavigation } from '@react-navigation/native';
+import { globalFont } from '../../utils/const';
+
+interface Vocabulary {
+    englishWord: string;
+    vietnameseWord: string;
+    wordType: string;
+}
+
 interface Iprops {
     modalVisible: boolean;
     setModalVisible: (v: boolean) => void;
+    vocabularies: Vocabulary[];
 }
+
 const VocabularyCard = (props: Iprops) => {
-    const navigation: NavigationProp<RootStackParamList> = useNavigation();
-    const { modalVisible, setModalVisible } = props;
+    const navigation: NavigationProp<any> = useNavigation();
+    const { modalVisible, setModalVisible, vocabularies } = props;
+    const [currentIndex, setCurrentIndex] = useState(0);
     const [currentScreen, setCurrentScreen] = useState('screen1');
-    const [selectedOption, setSelectedOption] = useState(''); // Trạng thái lưu lựa chọn của người dùng
-    const [correctAnswer] = useState('therefore'); // Đáp án đúng
+    const [selectedOption, setSelectedOption] = useState('');
+    const [correctAnswer, setCorrectAnswer] = useState('');
     const [showCorrectAnswer, setShowCorrectAnswer] = useState(false);
     const [actionTaken, setActionTaken] = useState(false);
+    const [isSelecting, setIsSelecting] = useState(true); // New state variable
+    const totalVocabularies = vocabularies.length; // Tổng số từ vựng có sẵn
+    const [progress, setProgress] = useState(0); // New state for progress
+
+    const [totalScore, setTotalScore] = useState(0); // New state for total score
+    useEffect(() => {
+        setSelectedOption('');
+        setShowCorrectAnswer(false);
+        setActionTaken(false);
+        setIsSelecting(true);
+        setCorrectAnswer(vocabularies[currentIndex]?.englishWord || '');
+       
+    }, [currentScreen, currentIndex, vocabularies]);
+
+    const getRandomOptions = () => {
+        if (vocabularies.length === 0) return []; // Return empty array if vocabularies are empty
+        const currentVocabulary = vocabularies[currentIndex];
+        const optionsSet = new Set<string>([currentVocabulary.englishWord]);
+
+        while (optionsSet.size < Math.min(4, vocabularies.length)) {
+            const randomIndex = Math.floor(Math.random() * vocabularies.length);
+            optionsSet.add(vocabularies[randomIndex].englishWord);
+        }
+
+        return Array.from(optionsSet);
+    };
+
+    const options = useMemo(() => getRandomOptions(), [currentIndex, vocabularies]); // Use vocabularies as dependency
+
+
     const handleOptionSelect = (option: string) => {
-        setSelectedOption(option); // Lưu lựa chọn của người dùng
-        setShowCorrectAnswer(false); // Reset lại trạng thái hiển thị đáp án đúng
-        setActionTaken(true); // Đánh dấu là đã chọn đáp án
+        if (!isSelecting) return;
+        setSelectedOption(option);
+        setShowCorrectAnswer(false);
+        setActionTaken(true);
+        setIsSelecting(false);
+
+        if (option === correctAnswer) {
+            setTotalScore((prevScore) => prevScore + 1000); // Increment score by 1000
+            if (currentScreen === 'screen3') {
+                setTimeout(() => {
+                    handleNextVocabulary();
+                }, 500);
+            } else {
+                setTimeout(() => {
+                    setCurrentScreen('screen3');
+                    setIsSelecting(true);
+                    setSelectedOption('');
+                }, 500);
+            }
+        } else {
+            // Handle wrong answer case if needed
+        }
     };
 
     const handleDontKnowPress = () => {
-        setShowCorrectAnswer(true); // Hiển thị đáp án đúng
-        setActionTaken(true); // Đánh dấu là đã chọn không biết
+        setShowCorrectAnswer(true);
+        setActionTaken(true);
     };
+
+    const handleNextVocabulary = () => {
+        if (currentIndex + 1 === vocabularies.length) {
+            setProgress(100);
+            setCurrentScreen('screen4');
+        } else {
+            const newIndex = currentIndex + 1;
+            setProgress((newIndex / totalVocabularies) * 100);
+            setCurrentIndex(newIndex);
+            setCurrentScreen('screen1');
+            setSelectedOption('');
+            setShowCorrectAnswer(false);
+            setActionTaken(false);
+            setIsSelecting(true);
+            setCorrectAnswer(vocabularies[newIndex]?.englishWord || '');
+        }
+    };
+    
+    
+
+
+
+
     const renderScreen = () => {
+        const currentVocabulary = vocabularies[currentIndex];
+        if (!currentVocabulary) {
+            return <Text>No vocabulary to display.</Text>;
+        }
+
         switch (currentScreen) {
             case 'screen1':
                 return (
-
-
                     <View style={styles.container}>
                         <View style={styles.vocabContainer}>
                             <Text style={styles.englishWord}>English</Text>
-                            <Text style={styles.englishWordtext}>therefore</Text>
+                            <Text style={styles.englishWordtext}>{currentVocabulary.englishWord}</Text>
                             <Text style={styles.vietnameseWord}>Vietnamese</Text>
-                            <Text style={styles.vietnameseWordtext}>vì thế</Text>
+                            <Text style={styles.vietnameseWordtext}>{currentVocabulary.vietnameseWord}</Text>
                         </View>
 
                         <View style={styles.typeContainer}>
                             <Text style={styles.typeLabel}>Attributes</Text>
                             <View style={styles.typeBox}>
-                                <Text style={styles.typeText}>TRẠNG TỪ</Text>
+                                <Text style={styles.typeText}>{currentVocabulary.wordType}</Text>
                             </View>
                         </View>
 
@@ -55,7 +140,7 @@ const VocabularyCard = (props: Iprops) => {
 
                         <TouchableOpacity style={styles.nextButton} onPress={() => setCurrentScreen('screen2')}>
                             <Text style={styles.nextButtonText}>Tiếp theo</Text>
-                            <AntDesign name="arrowright" size={24} color="white" style={styles.icon}/>
+                            <AntDesign name="arrowright" size={24} color="white" style={styles.icon} />
                         </TouchableOpacity>
                     </View>
 
@@ -68,88 +153,96 @@ const VocabularyCard = (props: Iprops) => {
                             <View style={styles.soundContainer}>
                                 <TouchableOpacity style={styles.soundButtonb}>
                                     <AntDesign name="sound" size={40} color="black" />
-
                                 </TouchableOpacity>
                                 <Text style={styles.label}>TRẠNG TỪ</Text>
                             </View>
 
                             <View style={styles.optionsContainer}>
-                                {['therefore', 'alone', 'cute', 'nearly'].map((option) => (
+                                {options.map((option) => (
                                     <TouchableOpacity
                                         key={option}
                                         style={[
                                             styles.optionButton,
+                                            // Apply styles based on selection
                                             selectedOption === option && option === correctAnswer
-                                                ? styles.correctAnswerButton // Đáp án đúng: màu xanh
+                                                ? styles.correctAnswerButton // Correct answer: green
                                                 : selectedOption === option && option !== correctAnswer
-                                                    ? styles.wrongAnswerButton // Đáp án sai: màu đỏ
+                                                    ? styles.wrongAnswerButton // Incorrect answer: red
                                                     : showCorrectAnswer && option === correctAnswer
-                                                        ? styles.correctAnswerButton // Hiển thị đáp án đúng khi không biết
+                                                        ? styles.correctAnswerButton // Show correct answer when "I don't know" is pressed
                                                         : null,
                                         ]}
                                         onPress={() => handleOptionSelect(option)}
+                                        disabled={!isSelecting} // Disable the button if isSelecting is false
                                     >
-                                        <Text style={styles.optionText} numberOfLines={3}>{option}</Text>
+                                        <Text style={styles.optionText} numberOfLines={1}>{option}</Text>
                                     </TouchableOpacity>
                                 ))}
                             </View>
                         </View>
 
-                        {/* Nút "Tôi không biết" */}
+                        {/* "I don't know" button */}
                         <TouchableOpacity
-                            style={[styles.dontKnowButton, actionTaken && styles.nextButton]} // Kết hợp các style
+                            style={[styles.dontKnowButton, actionTaken && styles.nextButton]} // Combine styles
                             onPress={actionTaken ? () => setCurrentScreen('screen3') : handleDontKnowPress}
                         >
                             <Text style={[styles.dontKnowText, actionTaken && styles.whiteText]}>{actionTaken ? 'Tiếp theo' : '? Tôi không biết'}</Text>
-                            {actionTaken && ( <AntDesign name="arrowright" size={24} color="white"  style={styles.icon}/>)}
+                            {actionTaken && (<AntDesign name="arrowright" size={24} color="white" style={styles.icon} />)}
                         </TouchableOpacity>
 
                     </View>
 
                 );
-                case 'screen3':
-                    return (
-                        <View style={styles.containerscr3}>
+            case 'screen3':
+                return (
+                    <View style={styles.containerscr3}>
                         <View style={styles.containerscr3box}>
-
                             <View style={styles.soundContainer}>
-                                <Text style={styles.labelvietnamese}>vì thế</Text>
-                                <Text style={styles.label}>TRẠNG TỪ</Text>
+                                <Text style={styles.labelvietnamese}>{currentVocabulary.vietnameseWord}</Text>
+                                <Text style={styles.label}>{currentVocabulary.wordType}</Text>
                             </View>
 
                             <View style={styles.optionsContainer}>
-                                {['therefore', 'alone', 'cute', 'nearly'].map((option) => (
+                                {options.map((option) => (
                                     <TouchableOpacity
                                         key={option}
                                         style={[
                                             styles.optionButtonscr3,
+                                            // Apply styles based on selection
                                             selectedOption === option && option === correctAnswer
-                                                ? styles.correctAnswerButton // Đáp án đúng: màu xanh
+                                                ? styles.correctAnswerButton // Correct answer: green
                                                 : selectedOption === option && option !== correctAnswer
-                                                    ? styles.wrongAnswerButton // Đáp án sai: màu đỏ
+                                                    ? styles.wrongAnswerButton // Incorrect answer: red
                                                     : showCorrectAnswer && option === correctAnswer
-                                                        ? styles.correctAnswerButton // Hiển thị đáp án đúng khi không biết
+                                                        ? styles.correctAnswerButton // Show correct answer when "I don't know" is pressed
                                                         : null,
                                         ]}
                                         onPress={() => handleOptionSelect(option)}
+                                        disabled={!isSelecting} // Disable the button if isSelecting is false
                                     >
-                                        <Text style={styles.optionText} numberOfLines={3}>{option}</Text>
+                                        <Text style={styles.optionText} numberOfLines={1}>{option}</Text>
                                     </TouchableOpacity>
                                 ))}
                             </View>
                         </View>
 
-                        {/* Nút "Tôi không biết" */}
+                        {/* Button "I don't know" */}
                         <TouchableOpacity
-                            style={[styles.dontKnowButton, actionTaken && styles.nextButton]} // Kết hợp các style
-                            onPress={actionTaken ? () => setCurrentScreen('screen3') : handleDontKnowPress}
+                            style={[styles.dontKnowButton, actionTaken && styles.nextButton]} // Combine styles
+                            onPress={actionTaken ? handleNextVocabulary : handleDontKnowPress}
                         >
                             <Text style={[styles.dontKnowText, actionTaken && styles.whiteText]}>{actionTaken ? 'Tiếp theo' : '? Tôi không biết'}</Text>
-                            {actionTaken && ( <AntDesign name="arrowright" size={24} color="white"  style={styles.icon}/>)}
+                            {actionTaken && (<AntDesign name="arrowright" size={24} color="white" style={styles.icon} />)}
                         </TouchableOpacity>
-
                     </View>
-                    );
+                );
+                case 'screen4': // New screen for summary
+            return (
+                <View style={styles.summaryContainer}>
+                    <Text style={styles.summaryText}>Tổng điểm: {totalScore}</Text>
+                    <Text style={styles.summaryText}>Số từ đã học: {currentIndex+1}</Text>
+                </View>
+            );
             default:
                 return null;
         }
@@ -163,7 +256,16 @@ const VocabularyCard = (props: Iprops) => {
             visible={modalVisible}
             onRequestClose={() => {
                 setModalVisible(false);
-                setCurrentScreen('screen1');
+                setCurrentScreen('screen1'); // Đặt lại về screen1
+                setCurrentIndex(0); // Reset về chỉ số từ vựng đầu tiên
+                setSelectedOption(''); // Reset lựa chọn
+                setShowCorrectAnswer(false); // Reset hiện đáp án đúng
+                setActionTaken(false); // Reset trạng thái hành động
+                setIsSelecting(true); // Đặt lại trạng thái chọn
+                setTotalScore(0); // Đặt lại trạng thái chọn
+                setProgress(0)
+
+
             }}
         >
             <View style={styles.container}>
@@ -173,6 +275,14 @@ const VocabularyCard = (props: Iprops) => {
                     <TouchableOpacity onPress={() => {
                         setModalVisible(false);
                         setCurrentScreen('screen1'); // Đặt lại về screen1
+                        setCurrentIndex(0); // Reset về chỉ số từ vựng đầu tiên
+                        setSelectedOption(''); // Reset lựa chọn
+                        setShowCorrectAnswer(false); // Reset hiện đáp án đúng
+                        setActionTaken(false); // Reset trạng thái hành động
+                        setIsSelecting(true); // Đặt lại trạng thái chọn
+                        setTotalScore(0); // Đặt lại trạng thái chọn
+                        setProgress(0)
+
                     }}>
                         <AntDesign name="closecircle" size={30} color="white" />
                     </TouchableOpacity>
@@ -180,11 +290,12 @@ const VocabularyCard = (props: Iprops) => {
                 <View style={styles.progressBarbox}>
                     <View style={styles.progressBarContainer}>
                         <View style={styles.progressBar}>
-                            <View style={styles.progress}></View>
+                            <Text style={[styles.progress, { width: `${progress}%` }]}></Text> 
                         </View>
+
                     </View>
                     <View style={styles.customprogressText}>
-                        <Text style={styles.progressText}>1548</Text>
+                        <Text style={styles.progressText}>{totalScore}</Text> 
                     </View>
                 </View>
                 {renderScreen()}
@@ -485,6 +596,7 @@ const styles = StyleSheet.create({
         fontSize: 18,
         fontWeight: 'bold',
         color: '#000', // Màu của số 1548
+        fontFamily: globalFont,
     },
     customprogressText: {
         display: 'flex',
@@ -494,7 +606,34 @@ const styles = StyleSheet.create({
         padding: 10,
 
         borderRadius: 20,
-    }
+    },
+    summaryContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: '#e6f4f5',
+        padding: 40,
+    },
+    summaryText: {
+        fontSize: 24,
+        fontWeight: 'bold',
+        color: '#000',
+        marginBottom: 20,
+        fontFamily: globalFont,
+    },
+    restartButton: {
+        backgroundColor: '#5de7c0',
+        padding: 10,
+        borderRadius: 10,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    restartButtonText: {
+        color: '#fff',
+        fontSize: 18,
+        fontWeight: 'bold',
+        fontFamily: globalFont,
+    },
 });
 
 export default VocabularyCard;

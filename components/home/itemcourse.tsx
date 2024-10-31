@@ -31,7 +31,8 @@ const CourseItem = () => {
       {courses.length > 0 ? (
         courses.map(course => (
           <View key={course.id} style={styles.cardContainer}>
-            <TouchableOpacity onPress={() => navigation.navigate("ReviewCourseScreen", { course })}>
+            <TouchableOpacity onPress={() => navigation.navigate("ReviewCourseScreen", { course: { ...course, createdAt: course.createdAt ? course.createdAt.toISOString() : null } })}
+>
               <View style={styles.header}>
                 <Image
                   source={{ uri: course.imageUrl || 'https://via.placeholder.com/150' }}

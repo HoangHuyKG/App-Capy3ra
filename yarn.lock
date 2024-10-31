@@ -9843,6 +9843,11 @@ react-native-safe-area-context@*, "react-native-safe-area-context@>= 3.0.0", rea
     react-freeze "^1.0.0"
     warn-once "^0.1.0"
 
+react-native-tooltip-menu@^3.0.7:
+  version "3.0.7"
+  resolved "https://registry.npmjs.org/react-native-tooltip-menu/-/react-native-tooltip-menu-3.0.7.tgz"
+  integrity sha512-d6+MlilDXfygwyMY3LvDPp9J6tLIIgwTwrzyz7g5zez70J4/EfaqYFZJXlxyfH6EQdQrnIz2YhS7jj8BmzsYBA==
+
 react-native-vector-icons@*:
   version "10.2.0"
   resolved "https://registry.npmjs.org/react-native-vector-icons/-/react-native-vector-icons-10.2.0.tgz"

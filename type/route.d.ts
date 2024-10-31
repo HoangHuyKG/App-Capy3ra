@@ -17,4 +17,5 @@ type RootStackParamList = {
     Editcourevocalbulary: undefined;
     VocabularyCard: undefined;
     CourseScreen: undefined;
+    EditCourse: undefined;
 }

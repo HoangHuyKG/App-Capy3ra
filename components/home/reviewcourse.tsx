@@ -9,7 +9,8 @@ import { useUser } from './UserContext';
 import AddLessonModal from '../modal/modal.addlession';
 import { db } from '../../fireBaseConfig'; // Import cấu hình Firebase
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
-
+import Entypo from '@expo/vector-icons/Entypo';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 const ReviewCourseScreen = () => {
     const navigation: NavigationProp<RootStackParamList> = useNavigation();
     const route = useRoute();
@@ -60,9 +61,18 @@ const ReviewCourseScreen = () => {
                         />
                         <Text style={styles.creatorName}>{course.created_by}</Text>
                         {currentUserId === course.idUser ? (
-                            <TouchableOpacity style={styles.buttonstudy} onPress={() => setModalVisibleadd(true)}>
-                                <Text style={styles.textbutton}>Thêm bài học</Text>
-                            </TouchableOpacity>
+                                <View style={styles.boxbutton}>
+                                        <TouchableOpacity style={styles.buttonstudy} onPress={() => setModalVisibleadd(true)}>
+                                        <Entypo name="circle-with-plus" size={20} color="white" />    
+                                        <Text style={styles.textbutton}>Thêm bài học</Text>
+                                        </TouchableOpacity>
+
+
+                                    <TouchableOpacity style={styles.buttonstudy} onPress={() => navigation.navigate("EditCourse")}>
+                                        <MaterialIcons name="edit" size={20} color="white" />
+                                        <Text style={styles.textbutton}>Chỉnh sửa</Text>
+                                    </TouchableOpacity>
+                            </View>
                         ) : (
                             <TouchableOpacity style={styles.buttonstudy} onPress={() => setModalVisible(true)}>
                                 <Text style={styles.textbutton}>Bắt đầu học</Text>
@@ -90,7 +100,7 @@ const ReviewCourseScreen = () => {
                         <Text style={styles.noLessonsText}>Chưa có bài học nào.</Text>
                     )}
                 </View>
-                <VocabularyCard modalVisible={modalVisible} setModalVisible={setModalVisible} />
+                {/* <VocabularyCard modalVisible={modalVisible} setModalVisible={setModalVisible} /> */}
                 <AddLessonModal modalVisible={modalVisibleadd} setModalVisible={setModalVisibleadd} courseId={courseId} />
             </ScrollView>
         </View>
@@ -103,15 +113,27 @@ const styles = StyleSheet.create({
         backgroundColor: '#e6f4f5',
     },
     buttonstudy: {
+        
+        display: 'flex',
+        flexDirection: 'row',
+        justifyContent: 'center',
+        alignContent: 'center',
         backgroundColor: "#25B212",
         padding: 10,
         borderRadius: 10,
+        marginRight: 10
+    },
+    boxcenter: {
+        display: 'flex',
+        justifyContent: 'center',
+        alignContent: 'center'
     },
     textbutton: {
         color: "#fff",
         fontFamily: globalFont,
         fontSize: 14,
-        fontWeight: "bold"
+        fontWeight: "bold",
+        marginLeft: 5
     },
     header: {
         borderTopWidth: 1,
@@ -125,6 +147,11 @@ const styles = StyleSheet.create({
         color: '#fff',
         fontSize: 22,
         fontWeight: 'bold',
+    },
+    boxbutton: {
+        display: 'flex',
+        flexDirection: 'row',
+        justifyContent: 'space-between'
     },
     subHeaderText: {
         color: '#fff',

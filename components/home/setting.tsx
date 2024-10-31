@@ -82,7 +82,7 @@ const SettingScreen = () => {
         try {
           await auth.signOut(); // Đăng xuất từ Firebase
           setUserInfo(null); // Xoá thông tin người dùng trong context
-          navigation.navigate("LoginScreen");
+          navigation.navigate("StartedLoginScreen");
         } catch (error) {
           console.error("Sign-out error: ", error);
         }
