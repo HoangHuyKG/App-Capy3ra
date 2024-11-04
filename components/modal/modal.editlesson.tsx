@@ -2,14 +2,71 @@ import React, { useEffect, useState } from 'react';
 import { Modal, View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { Button } from 'react-native-paper';
 import { globalFont } from '../../utils/const';
-import { db } from '../../fireBaseConfig'; // Import cấu hình Firebase
-import { collection, query, where, onSnapshot, setDoc, doc } from 'firebase/firestore';
+import { db } from '../../fireBaseConfig';
+import { collection, query, where, getDocs, deleteDoc, doc, setDoc, onSnapshot } from 'firebase/firestore';
 
-const EditLessonModal = ({ modalVisible, setModalVisible }) => {
+const EditLessonModal = ({ modalVisible, setModalVisible, lessonId }) => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [lessons, setLessons] = useState([]);
 
+  useEffect(() => {
+    let unsubscribe;
+    if (lessonId && modalVisible) {
+      const lessonRef = doc(db, 'Lessons', lessonId);
+      
+      // Sử dụng onSnapshot để lắng nghe thay đổi real-time
+      unsubscribe = onSnapshot(lessonRef, (lessonDoc) => {
+        if (lessonDoc.exists()) {
+          const lessonData = lessonDoc.data();
+          setTitle(lessonData.title || '');
+          setDescription(lessonData.description || '');
+        } else {
+        
+          setModalVisible(false); // Đóng modal nếu bài học không tồn tại
+        }
+      });
+    }
+    
+    // Clean up subscription khi component unmount hoặc modal đóng
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+  }, [lessonId, modalVisible]);
+
+  const handleUpdateLesson = async () => {
+    try {
+      await setDoc(doc(db, 'Lessons', lessonId), { title, description }, { merge: true });
+      Alert.alert('Cập nhật thành công');
+      setModalVisible(false);
+    } catch (error) {
+      console.error('Lỗi khi cập nhật bài học: ', error);
+      Alert.alert('Cập nhật thất bại');
+    }
+  };
+
+  const handleDeleteLesson = async () => {
+    try {
+      // Truy vấn các từ vựng liên quan đến bài học
+      const vocabulariesRef = collection(db, 'Vocabularies');
+      const q = query(vocabulariesRef, where('lessonId', '==', lessonId));
+      const querySnapshot = await getDocs(q);
+  
+      // Xóa từng từ vựng
+      const deleteVocabularyPromises = querySnapshot.docs.map((docSnapshot) => 
+        deleteDoc(doc(db, 'Vocabularies', docSnapshot.id))
+      );
+      await Promise.all(deleteVocabularyPromises);
+  
+      // Xóa bài học sau khi xóa tất cả từ vựng
+      await deleteDoc(doc(db, 'Lessons', lessonId));
+      
+      Alert.alert('Xóa bài học và từ vựng thành công');
+      setModalVisible(false);
+    } catch (error) {
+      console.error('Lỗi khi xóa bài học và từ vựng: ', error);
+      Alert.alert('Xóa thất bại');
+    }
+  };
 
   return (
     <Modal visible={modalVisible} animationType="slide" transparent={true}>
@@ -29,19 +86,16 @@ const EditLessonModal = ({ modalVisible, setModalVisible }) => {
             onChangeText={setDescription}
           />
           <View style={styles.buttonContainer}>
-            <Button mode="contained"  style={styles.button}>
+            <Button mode="contained" onPress={handleUpdateLesson} style={styles.button}>
               <Text style={styles.buttontext}>Sửa</Text>
             </Button>
-            <Button mode="contained"  style={styles.button}>
+            <Button mode="contained" onPress={handleDeleteLesson} style={styles.button}>
               <Text style={styles.buttontext}>Xóa</Text>
             </Button>
             <Button mode="outlined" onPress={() => setModalVisible(false)} style={styles.button}>
               <Text style={styles.buttontext}>Hủy</Text>
             </Button>
           </View>
-          
-       
-         
         </View>
       </View>
     </Modal>
@@ -90,22 +144,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#02929A",
     flex: 1,
     marginHorizontal: 5,
-  },
-  lessonsContainer: {
-    marginTop: 20,
-    width: '100%',
-  },
-  lessonsTitle: {
-    fontWeight: 'bold',
-    marginBottom: 10,
-  },
-  lessonItem: {
-    padding: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#ccc',
-  },
-  lessonTitle: {
-    fontWeight: 'bold',
   },
 });
 

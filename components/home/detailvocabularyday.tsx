@@ -4,14 +4,14 @@ import { ImagesAssets } from '../../assets/images/ImagesAssets';
 import { useRoute } from '@react-navigation/native';
 import AppHeader from '../navigation/app.header';
 import { globalFont } from '../../utils/const';
-import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
-import AddVocabularyModal from '../modal/modal.addvocalbulary';
 import AntDesign from '@expo/vector-icons/AntDesign';
 import { db } from '../../fireBaseConfig';
-import { doc, getDoc, collection, getDocs, query, where, addDoc, onSnapshot } from 'firebase/firestore';
+import { doc, collection, query, where, onSnapshot } from 'firebase/firestore';
+import AddVocabularyModal from '../modal/modal.addvocalbulary';
 import VocabularyCard from '../modal/modal.vocabularycard';
-import EditVocalbularyModal from '../modal/modal.editvocalbulary';
+import EditVocabularyModal from '../modal/modal.editvocalbulary';
 import EditLessonModal from '../modal/modal.editlesson';
+
 const DetailVocabularyDay = () => {
     const [modalVisible, setModalVisible] = useState(false);
     const [modalVisiblelearn, setModalVisiblelearn] = useState(false);
@@ -20,50 +20,53 @@ const DetailVocabularyDay = () => {
     const [lessonData, setLessonData] = useState(null);
     const [vocabularies, setVocabularies] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [vocabId, setVocabId] = useState(null); // State to store selected vocabId
     const route = useRoute();
     const { lessonId } = route.params;
 
     useEffect(() => {
-        const fetchLessonData = async () => {
-            try {
-                const docRef = doc(db, 'Lessons', lessonId);
-                const docSnap = await getDoc(docRef);
-                if (docSnap.exists()) {
-                    setLessonData(docSnap.data());
-                } else {
-                    console.log("No such document!");
-                }
-            } catch (error) {
-                console.error("Error fetching lesson data: ", error);
+        const fetchLessonData = () => {
+            if (lessonId) {
+                const lessonDocRef = doc(db, 'Lessons', lessonId);
+                const unsubscribeLesson = onSnapshot(lessonDocRef, (docSnap) => {
+                    if (docSnap.exists()) {
+                        setLessonData(docSnap.data());
+                    } else {
+                        console.log("No such document!");
+                    }
+                }, (error) => {
+                    console.error("Error fetching lesson data: ", error);
+                });
+
+                return unsubscribeLesson;
             }
         };
 
         const fetchVocabularyData = () => {
-            // Lắng nghe các thay đổi trong bộ sưu tập từ vựng
             const vocabCollection = collection(db, 'Vocabularies');
-            const vocabQuery = query(vocabCollection, where('lessonId', '==', lessonId)); // Lọc theo lessonId
+            const vocabQuery = query(vocabCollection, where('lessonId', '==', lessonId));
 
-            const unsubscribe = onSnapshot(vocabQuery, (snapshot) => {
+            const unsubscribeVocab = onSnapshot(vocabQuery, (snapshot) => {
                 const vocabList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 setVocabularies(vocabList);
             }, (error) => {
                 console.error("Error fetching vocabulary data: ", error);
             });
 
-            return unsubscribe; // Trả về hàm hủy để ngăn lắng nghe khi component bị hủy
-        };
-        const fetchData = async () => {
-
-            setLoading(true);
-            await fetchLessonData();
-            fetchVocabularyData();
-            setLoading(false);
+            return unsubscribeVocab;
         };
 
-        fetchData();
+        setLoading(true);
+        const unsubscribeLesson = fetchLessonData();
+        const unsubscribeVocab = fetchVocabularyData();
+        setLoading(false);
+
+        // Clean up subscriptions on unmount
+        return () => {
+            unsubscribeLesson();
+            unsubscribeVocab();
+        };
     }, [lessonId]);
-
-
 
     if (loading) {
         return <Text>Loading...</Text>;
@@ -74,23 +77,23 @@ const DetailVocabularyDay = () => {
     }
 
     const renderItem = ({ item }) => (
-        <TouchableOpacity onPress={() => setModalVisibleedit(true)}>
-
-        <View style={styles.tableRow}>
-            <Text style={styles.columnEn} numberOfLines={1} ellipsizeMode="tail">
-                {item.englishWord}
-            </Text>
-            <Text style={styles.columnVn} numberOfLines={1} ellipsizeMode="tail">
-                {item.vietnameseWord}
-            </Text>
-            <Text style={styles.columnType} numberOfLines={1} ellipsizeMode="tail">
-                {item.wordType}
-            </Text>
-        </View>
+        <TouchableOpacity onPress={() => {
+            setVocabId(item.id); // Set the selected vocabId
+            setModalVisibleedit(true); // Open the edit modal
+        }}>
+            <View style={styles.tableRow}>
+                <Text style={styles.columnEn} numberOfLines={1} ellipsizeMode="tail">
+                    {item.englishWord}
+                </Text>
+                <Text style={styles.columnVn} numberOfLines={1} ellipsizeMode="tail">
+                    {item.vietnameseWord}
+                </Text>
+                <Text style={styles.columnType} numberOfLines={1} ellipsizeMode="tail">
+                    {item.wordType}
+                </Text>
+            </View>
         </TouchableOpacity>
     );
-
-
 
     return (
         <View style={styles.container}>
@@ -98,19 +101,18 @@ const DetailVocabularyDay = () => {
             <View style={styles.containerbox}>
                 <View style={styles.header}>
                     <View style={styles.creator}>
-                    <TouchableOpacity style={styles.buttonstudya} onPress={() => setModalVisibleeditlesson(true)}>
-                            <View style={styles.buttonboxx} >
-                            <AntDesign name="edit" size={24} color="white" />
+                        <TouchableOpacity style={styles.buttonstudya} onPress={() => setModalVisibleeditlesson(true)}>
+                            <View style={styles.buttonboxx}>
+                                <AntDesign name="edit" size={24} color="white" />
                                 <Text style={styles.textbutton}>Chỉnh sửa</Text>
                             </View>
                         </TouchableOpacity>
                         <TouchableOpacity style={styles.buttonstudya} onPress={() => setModalVisible(true)}>
-                            <View style={styles.buttonboxx} >
+                            <View style={styles.buttonboxx}>
                                 <AntDesign name="pluscircleo" size={20} color="white" />
                                 <Text style={styles.textbutton}>Thêm từ vựng</Text>
                             </View>
                         </TouchableOpacity>
-                        
                     </View>
                 </View>
             </View>
@@ -130,37 +132,45 @@ const DetailVocabularyDay = () => {
             </View>
 
             <View style={styles.mainContent}>
-            <View style={styles.headerRow}>
-            <View style={styles.headerColumnEn}>
-                <Text style={styles.headerText}>Tiếng Anh</Text>
-            </View>
-            <View style={styles.headerColumnVn}>
-                <Text style={styles.headerText}>Tiếng Việt</Text>
-            </View>
-            <View style={styles.headerColumnType}>
-                <Text style={styles.headerText}>Từ loại</Text>
-            </View>
-        </View>
+                <View style={styles.headerRow}>
+                    <View style={styles.headerColumnEn}>
+                        <Text style={styles.headerText}>Tiếng Anh</Text>
+                    </View>
+                    <View style={styles.headerColumnVn}>
+                        <Text style={styles.headerText}>Tiếng Việt</Text>
+                    </View>
+                    <View style={styles.headerColumnType}>
+                        <Text style={styles.headerText}>Từ loại</Text>
+                    </View>
+                </View>
                 <FlatList
                     data={vocabularies}
                     renderItem={renderItem}
                     keyExtractor={(item) => item.id}
                     contentContainerStyle={styles.wordListContent}
                 />
-
-
             </View>
+
             <AddVocabularyModal
                 modalVisible={modalVisible}
                 setModalVisible={setModalVisible}
                 lessonId={lessonId}
             />
-            <VocabularyCard modalVisible={modalVisiblelearn} setModalVisible={setModalVisiblelearn} vocabularies={vocabularies}/>
-            <EditVocalbularyModal modalVisible={modalVisibleedit} setModalVisible={setModalVisibleedit}/>
-            <EditLessonModal modalVisible={modalVisibleeditlesson} setModalVisible={setModalVisibleeditlesson}/>
+            <VocabularyCard modalVisible={modalVisiblelearn} setModalVisible={setModalVisiblelearn} vocabularies={vocabularies} />
+            <EditVocabularyModal 
+                modalVisible={modalVisibleedit} 
+                setModalVisible={setModalVisibleedit} 
+                vocabId={vocabId} // Pass the vocabId to the modal
+            />
+            <EditLessonModal
+                modalVisible={modalVisibleeditlesson}
+                setModalVisible={setModalVisibleeditlesson}
+                lessonId={lessonId}
+            />
         </View>
     );
 };
+
 
 const styles = StyleSheet.create({
 

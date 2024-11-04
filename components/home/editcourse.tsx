@@ -1,42 +1,106 @@
-import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, TextInput, View, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import AppHeader from '../navigation/app.header';
 import { db } from '../../fireBaseConfig';
 import { globalFont } from '../../utils/const';
-import { collection, addDoc, onSnapshot, updateDoc } from 'firebase/firestore';
+import { doc, onSnapshot, updateDoc, deleteDoc, query, collection, where, getDocs } from 'firebase/firestore'; // Import deleteDoc
 import { useUser } from './UserContext';
 import { NavigationProp, useNavigation } from '@react-navigation/native';
 import Feather from '@expo/vector-icons/Feather';
-import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
-const EditCourse = () => {
-    const { userInfo } = useUser(); // Lấy userInfo từ context
-    const [courseId, setCourseId] = useState('');
-    const [createdBy, setCreatedBy] = useState('');
+import { useEffect, useState } from 'react';
+
+const EditCourse = ({ route }) => {
+    const { userInfo } = useUser();
+    const courseId = route.params.course; // Nhận courseId từ navigation params
+
+    const [created_by, setCreatedBy] = useState('');
     const [description, setDescription] = useState('');
     const [language, setLanguage] = useState('');
     const [title, setTitle] = useState('');
     const [imageUrl, setImageUrl] = useState('');
-    const [courses, setCourses] = useState([]); // State để lưu các khóa học real-time
-    const [imageUser, setImageUser] = useState(userInfo?.data?.user?.photo || ''); // Đặt giá trị ban đầu đúng
-    const [idUser, setidUser] = useState(userInfo?.data?.user?.id || ''); // Đặt giá trị ban đầu đúng
-    const navigation: NavigationProp<RootStackParamList> = useNavigation();
+    const navigation = useNavigation();
 
-    
-    
+    useEffect(() => {
+        const unsubscribe = onSnapshot(doc(db, "Courses", courseId), (courseDoc) => {
+            if (courseDoc.exists()) {
+                const courseData = courseDoc.data();
+                setCreatedBy(courseData.created_by);
+                setDescription(courseData.description);
+                setLanguage(courseData.language);
+                setTitle(courseData.title);
+                setImageUrl(courseData.imageUrl);
+            } 
+        }, (error) => {
+            console.error("Lỗi khi lắng nghe thay đổi:", error);
+            Alert.alert("Đã xảy ra lỗi khi lắng nghe thay đổi.");
+        });
+
+        // Clean up the listener on unmount
+        return () => unsubscribe();
+    }, [courseId]);
+
+    // Hàm cập nhật dữ liệu khóa học
+    const updateCourse = async () => {
+        try {
+            await updateDoc(doc(db, "Courses", courseId), {
+                created_by,
+                description,
+                language,
+                title,
+                imageUrl,
+            });
+            Alert.alert("Khóa học đã được cập nhật thành công!");
+            navigation.goBack();
+        } catch (error) {
+            console.error("Lỗi khi cập nhật khóa học:", error);
+            Alert.alert("Đã xảy ra lỗi khi cập nhật khóa học.");
+        }
+    };
+
+    // Hàm xóa dữ liệu khóa học
+    const deleteCourse = async () => {
+        try {
+            if (!courseId) {
+                console.error('courseId không hợp lệ:', courseId);
+                Alert.alert('Lỗi: courseId không hợp lệ');
+                return;
+            }
+
+            const lessonsQuery = query(collection(db, 'Lessons'), where('courseId', '==', courseId));
+            const lessonsSnapshot = await getDocs(lessonsQuery);
+
+            for (const lessonDoc of lessonsSnapshot.docs) {
+                const lessonId = lessonDoc.id;
+                if (lessonId) {
+                    const vocabQuery = query(collection(db, 'Vocabularies'), where('lessonId', '==', lessonId));
+                    const vocabSnapshot = await getDocs(vocabQuery);
+
+                    for (const vocabDoc of vocabSnapshot.docs) {
+                        await deleteDoc(doc(db, 'Vocabularies', vocabDoc.id));
+                    }
+                    await deleteDoc(doc(db, 'Lessons', lessonId));
+                }
+            }
+
+            await deleteDoc(doc(db, 'Courses', courseId));
+            Alert.alert('Khóa học đã được xóa thành công!');
+            navigation.goBack();
+        } catch (error) {
+            console.error('Lỗi khi xóa khóa học và dữ liệu liên quan:', error);
+            Alert.alert('Đã xảy ra lỗi khi xóa khóa học và dữ liệu liên quan.');
+        }
+    };
 
     return (
         <View style={styles.container}>
             <AppHeader />
             <ScrollView style={styles.containerbox}>
                 <View style={styles.formContainer}>
-                  
-
                     <Text style={styles.label}>Người tạo</Text>
                     <TextInput
                         style={styles.input}
                         placeholder="Nhập tên người tạo"
-                        value={createdBy}
+                        value={created_by}
                         onChangeText={setCreatedBy}
                     />
 
@@ -79,26 +143,24 @@ const EditCourse = () => {
                         value={imageUrl}
                         onChangeText={setImageUrl}
                     />
-                <View style={styles.buttoncenter}>
 
-                    <TouchableOpacity style={styles.button}>
-                        <Feather name="edit" size={24} color="white" />
-                        <Text style={styles.buttonText}>Sửa khóa học</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.button}>
-                        <FontAwesome5 name="trash-alt" size={24} color="white" />
-                        <Text style={styles.buttonText}>Xóa khóa học</Text>
-                    </TouchableOpacity>
+                    <View style={styles.buttoncenter}>
+                        <TouchableOpacity style={styles.button} onPress={updateCourse}>
+                            <Feather name="edit" size={24} color="white" />
+                            <Text style={styles.buttonText}>Sửa khóa học</Text>
+                        </TouchableOpacity>
+                        
+                        {/* Nút xóa khóa học */}
+                        <TouchableOpacity style={styles.button} onPress={deleteCourse}>
+                            <Feather name="trash-2" size={24} color="white" />
+                            <Text style={styles.buttonText}>Xóa khóa học</Text>
+                        </TouchableOpacity>
+                    </View>
                 </View>
-                </View>
-
-
             </ScrollView>
         </View>
     );
 };
-
-
 
 
 const styles = StyleSheet.create({
@@ -110,34 +172,6 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: '#e6f4f5',
         padding: 20
-    },
-    header: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        backgroundColor: '#02929A',
-        paddingVertical: 10,
-        paddingHorizontal: 16,
-        borderBottomLeftRadius: 20,
-        borderBottomRightRadius: 20,
-    },
-    headerText: {
-        fontSize: 18,
-        color: '#fff',
-        fontFamily: globalFont
-    },
-    headerTextSelected: {
-        fontSize: 18,
-        color: '#fff',
-        textDecorationLine: 'underline',
-        fontFamily: globalFont
-
-    },
-    avatar: {
-        height: 40,
-        width: 40,
-        borderRadius: 20,
-        backgroundColor: '#fff',
     },
     formContainer: {
         marginTop: 20,
@@ -152,7 +186,6 @@ const styles = StyleSheet.create({
         marginBottom: 8,
         color: '#333',
         fontFamily: globalFont
-
     },
     input: {
         borderColor: '#ddd',
@@ -171,10 +204,6 @@ const styles = StyleSheet.create({
         borderColor: '#ddd',
         marginBottom: 16,
         backgroundColor: '#fff',
-    },
-    picker: {
-        height: 30,
-        width: '100%',
     },
     textArea: {
         padding: 15,
@@ -202,7 +231,6 @@ const styles = StyleSheet.create({
         fontSize: 18,
         marginLeft: 10,
         fontFamily: globalFont
-
     },
 });
 

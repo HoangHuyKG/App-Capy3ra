@@ -68,7 +68,7 @@ const ReviewCourseScreen = () => {
                                         </TouchableOpacity>
 
 
-                                    <TouchableOpacity style={styles.buttonstudy} onPress={() => navigation.navigate("EditCourse")}>
+                                    <TouchableOpacity style={styles.buttonstudy} onPress={() =>  navigation.navigate("EditCourse", { course: course.id })}>
                                         <MaterialIcons name="edit" size={20} color="white" />
                                         <Text style={styles.textbutton}>Chỉnh sửa</Text>
                                     </TouchableOpacity>
