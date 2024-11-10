@@ -1,106 +1,114 @@
-import React, { useEffect, useState } from 'react';
+
 import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView } from 'react-native';
 import AppHeader from '../navigation/app.header';
 import { globalFont } from '../../utils/const';
 import { ImagesAssets } from '../../assets/images/ImagesAssets';
 import { NavigationProp, useNavigation, useRoute } from '@react-navigation/native';
-import VocabularyCard from '../modal/modal.vocabularycard';
 import { useUser } from './UserContext';
 import AddLessonModal from '../modal/modal.addlession';
-import { db } from '../../fireBaseConfig'; // Import cấu hình Firebase
-import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { db } from '../../fireBaseConfig';
+import { collection, query, where, onSnapshot, doc, getDoc } from 'firebase/firestore';
 import Entypo from '@expo/vector-icons/Entypo';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import { useEffect, useState } from 'react';
+
 const ReviewCourseScreen = () => {
     const navigation: NavigationProp<RootStackParamList> = useNavigation();
     const route = useRoute();
-    const { course } = route.params; // Lấy dữ liệu từ params
+    const { courseId } = route.params || {}; // Sử dụng courseId từ params nếu có
+    const [modalVisibleadd, setModalVisibleadd] = useState(false);
+    const [lessons, setLessons] = useState([]);
+    const [courseData, setCourseData] = useState(null);
 
-    // Kiểm tra nếu course không tồn tại
-    if (!course) {
+    const { userInfo } = useUser();
+    const currentUserId = userInfo?.data?.user?.id;
+
+    // Lấy dữ liệu khóa học nếu courseId tồn tại
+    useEffect(() => {
+        if (courseId) {
+            const courseRef = doc(db, 'Courses', courseId);
+            const unsubscribe = onSnapshot(courseRef, (doc) => {
+                if (doc.exists()) {
+                    setCourseData({ id: doc.id, ...doc.data() });
+                }
+            });
+            return () => unsubscribe();
+        }
+    }, [courseId]);
+
+    // Lấy danh sách bài học theo courseId
+    useEffect(() => {
+        if (courseId) {
+            const lessonsRef = collection(db, 'Lessons');
+            const q = query(lessonsRef, where('courseId', '==', courseId));
+            
+            const unsubscribe = onSnapshot(q, (snapshot) => {
+                const lessonsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                setLessons(lessonsData);
+            });
+            
+            return () => unsubscribe();
+        }
+    }, [courseId]);
+
+    if (!courseData) {
         return (
             <View style={styles.container}>
                 <Text>Không có dữ liệu khóa học.</Text>
             </View>
         );
     }
-
-    const [modalVisible, setModalVisible] = useState(false);
-    const [modalVisibleadd, setModalVisibleadd] = useState(false);
-    const [lessons, setLessons] = useState([]); // Dữ liệu bài học
-    const { userInfo } = useUser();
-    const currentUserId = userInfo?.data?.user?.id;
-
-    // Lấy courseId từ course
-    const courseId = course.id; // Hoặc course.courseId tùy thuộc vào cách bạn định nghĩa course
-
-    // Lắng nghe dữ liệu bài học theo courseId
-    useEffect(() => {
-        const lessonsRef = collection(db, 'Lessons');
-        const q = query(lessonsRef, where('courseId', '==', courseId));
-        
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            const lessonsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            setLessons(lessonsData);
-        });
-
-        return () => unsubscribe(); // Hủy đăng ký khi component unmount
-    }, [courseId]);
-
     return (
         <View style={styles.container}>
             <AppHeader />
             <ScrollView style={styles.container}>
                 <View style={styles.header}>
-                    <Text style={styles.headerText}>{course.title}</Text>
-                    <Text style={styles.subHeaderText}>{course.description}</Text>
+                    <Text style={styles.headerText}>{courseData.title}</Text>
+                    <Text style={styles.subHeaderText}>{courseData.description}</Text>
                     <View style={styles.creator}>
                         <Image
-                            source={{ uri: course.imageUser || 'https://randomuser.me/api/portraits/women/44.jpg' }}
+                            source={{ uri: courseData.imageUser || 'https://randomuser.me/api/portraits/women/44.jpg' }}
                             style={styles.avatar}
                         />
-                        <Text style={styles.creatorName}>{course.created_by}</Text>
-                        {currentUserId === course.idUser ? (
-                                <View style={styles.boxbutton}>
-                                        <TouchableOpacity style={styles.buttonstudy} onPress={() => setModalVisibleadd(true)}>
-                                        <Entypo name="circle-with-plus" size={20} color="white" />    
-                                        <Text style={styles.textbutton}>Thêm bài học</Text>
-                                        </TouchableOpacity>
+                        <Text style={styles.creatorName}>{courseData.created_by}</Text>
+                        {currentUserId === courseData.idUser ? (
+                            <View style={styles.boxbutton}>
+                                <TouchableOpacity style={styles.buttonstudy} onPress={() => setModalVisibleadd(true)}>
+                                    <Entypo name="circle-with-plus" size={20} color="white" />
+                                    <Text style={styles.textbutton}>Thêm bài học</Text>
+                                </TouchableOpacity>
 
-
-                                    <TouchableOpacity style={styles.buttonstudy} onPress={() =>  navigation.navigate("EditCourse", { course: course.id })}>
-                                        <MaterialIcons name="edit" size={20} color="white" />
-                                        <Text style={styles.textbutton}>Chỉnh sửa</Text>
-                                    </TouchableOpacity>
+                                <TouchableOpacity style={styles.buttonstudy} onPress={() => navigation.navigate("EditCourse", { course: courseData.id })}>
+                                    <MaterialIcons name="edit" size={20} color="white" />
+                                    <Text style={styles.textbutton}>Chỉnh sửa</Text>
+                                </TouchableOpacity>
                             </View>
                         ) : (
-                            <TouchableOpacity style={styles.buttonstudy} onPress={() => setModalVisible(true)}>
-                                <Text style={styles.textbutton}>Bắt đầu học</Text>
-                            </TouchableOpacity>
+                            <View></View>
                         )}
                     </View>
                 </View>
-                {/* Hiển thị danh sách bài học */}
+                
                 <View style={styles.daySection}>
                     {lessons.length > 0 ? (
                         lessons.map((lesson) => (
-                        <TouchableOpacity 
-                            key={lesson.id} 
-                            style={styles.dayCard} 
-                            onPress={() => navigation.navigate("DetailVocabularyDay", { lessonId: lesson.id })} // Truyền lessonId qua params
-                        >
-                            <Image
-                                source={ImagesAssets.logodetail}
-                                style={styles.dayImage}
-                            />
-                            <Text style={styles.textimage}>{lesson.title}</Text>
-                        </TouchableOpacity>
+                            <TouchableOpacity 
+                                key={lesson.id} 
+                                style={styles.dayCard} 
+                                onPress={() => navigation.navigate("DetailVocabularyDay", { lessonId: lesson.id })}
+                            >
+                                <Image
+                                    source={ImagesAssets.logodetail}
+                                    style={styles.dayImage}
+                                />
+                                <Text style={styles.textimage}>{lesson.title}</Text>
+                            </TouchableOpacity>
                         ))
                     ) : (
                         <Text style={styles.noLessonsText}>Chưa có bài học nào.</Text>
                     )}
                 </View>
-                {/* <VocabularyCard modalVisible={modalVisible} setModalVisible={setModalVisible} /> */}
+
                 <AddLessonModal modalVisible={modalVisibleadd} setModalVisible={setModalVisibleadd} courseId={courseId} />
             </ScrollView>
         </View>

@@ -1,15 +1,13 @@
-
-import { StyleSheet, Text, View, Image, Button, TouchableOpacity, ScrollView } from "react-native"
-import AppHeader from "../navigation/app.header"
-import { globalFont } from "../../utils/const"
+import { StyleSheet, Text, View, TouchableOpacity, ScrollView } from "react-native";
+import AppHeader from "../navigation/app.header";
+import { globalFont } from "../../utils/const";
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import ItemHome from "./itemhome";
-import { FlatList } from "react-native-gesture-handler";
 import ModalLearnOrTeach from "../modal/modal.learnorteach";
 import { useState } from "react";
-import { useRoute } from '@react-navigation/native';
-import ModalMenu from "../modal/modal.menu";
+import { useUser } from "./UserContext"; // Import useUser hook
+
 const styles = StyleSheet.create({
     container: {
         flex: 1,
@@ -25,45 +23,45 @@ const styles = StyleSheet.create({
         padding: 10,
         backgroundColor: '#02929A',
         width: 200,
-        borderRadius: 10
+        borderRadius: 10,
     },
     boxchangetext: {
         color: '#fff',
-        fontFamily: globalFont
+        fontFamily: globalFont,
     },
     boxitem: {
         display: 'flex',
         flex: 1,
-        overflow: 'scroll'
-    }
-})
+        overflow: 'scroll',
+    },
+});
+
 const HomeScreen = () => {
-const [modalVisible, setModalVisible] = useState(false);
+    const [modalVisible, setModalVisible] = useState(false);
+    const { userInfo } = useUser(); // Lấy thông tin người dùng từ UserContext
+    const userId = userInfo?.data?.user?.id; // Lấy userId từ userInfo
 
     return (
         <View style={styles.container}>
             <AppHeader />
-            <TouchableOpacity style={styles.boxchange} onPress={()=>setModalVisible(true)}>
+            <TouchableOpacity
+                style={styles.boxchange}
+                onPress={() => setModalVisible(true)}
+            >
                 <FontAwesome name="graduation-cap" size={20} color="white" />
                 <Text style={styles.boxchangetext}>Đang học</Text>
                 <MaterialIcons name="arrow-drop-down" size={24} color="white" />
             </TouchableOpacity>
             <ScrollView style={styles.boxitem}>
-                    <ItemHome />
-                    <ItemHome />
-                    <ItemHome />
-                    <ItemHome />
-                    <ItemHome />
-                
+                {/* Truyền userId vào ItemHome */}
+                <ItemHome userId={userId} />
             </ScrollView>
             <ModalLearnOrTeach
                 modalVisible={modalVisible}
                 setModalVisible={setModalVisible}
             />
-            
         </View>
-
-    )
-}
+    );
+};
 
 export default HomeScreen;

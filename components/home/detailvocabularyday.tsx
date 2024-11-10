@@ -6,11 +6,12 @@ import AppHeader from '../navigation/app.header';
 import { globalFont } from '../../utils/const';
 import AntDesign from '@expo/vector-icons/AntDesign';
 import { db } from '../../fireBaseConfig';
-import { doc, collection, query, where, onSnapshot } from 'firebase/firestore';
+import { doc, collection, query, where, onSnapshot, addDoc } from 'firebase/firestore';
 import AddVocabularyModal from '../modal/modal.addvocalbulary';
 import VocabularyCard from '../modal/modal.vocabularycard';
 import EditVocabularyModal from '../modal/modal.editvocalbulary';
 import EditLessonModal from '../modal/modal.editlesson';
+import { useUser } from './UserContext';
 
 const DetailVocabularyDay = () => {
     const [modalVisible, setModalVisible] = useState(false);
@@ -23,7 +24,9 @@ const DetailVocabularyDay = () => {
     const [vocabId, setVocabId] = useState(null); // State to store selected vocabId
     const route = useRoute();
     const { lessonId } = route.params;
-
+    const { userInfo } = useUser();
+    const currentUserId = userInfo?.data?.user?.id;
+    const { course } = route.params; // Lấy dữ liệu từ params
     useEffect(() => {
         const fetchLessonData = () => {
             if (lessonId) {
@@ -41,7 +44,7 @@ const DetailVocabularyDay = () => {
                 return unsubscribeLesson;
             }
         };
-
+        
         const fetchVocabularyData = () => {
             const vocabCollection = collection(db, 'Vocabularies');
             const vocabQuery = query(vocabCollection, where('lessonId', '==', lessonId));
@@ -75,24 +78,52 @@ const DetailVocabularyDay = () => {
     if (!lessonData) {
         return <Text>Không tìm thấy dữ liệu bài học.</Text>;
     }
-
+    const handleAddUserCourse = async () => {
+        try {
+            await addDoc(collection(db, 'User_Course'), {
+                user_course_id: `${currentUserId}_${lessonId}`,
+                user_id: currentUserId,
+                course_id: lessonData.courseId, // Sử dụng ID của khóa học
+                progress: 0 // Giá trị phần trăm hoàn thành ban đầu
+            });
+            console.log("User_Course record added successfully!");
+        } catch (error) {
+            console.error("Error adding User_Course record: ", error);
+        }
+    };
     const renderItem = ({ item }) => (
-        <TouchableOpacity onPress={() => {
-            setVocabId(item.id); // Set the selected vocabId
-            setModalVisibleedit(true); // Open the edit modal
-        }}>
-            <View style={styles.tableRow}>
-                <Text style={styles.columnEn} numberOfLines={1} ellipsizeMode="tail">
-                    {item.englishWord}
-                </Text>
-                <Text style={styles.columnVn} numberOfLines={1} ellipsizeMode="tail">
-                    {item.vietnameseWord}
-                </Text>
-                <Text style={styles.columnType} numberOfLines={1} ellipsizeMode="tail">
-                    {item.wordType}
-                </Text>
+        currentUserId === lessonData.idUser ? (
+            <TouchableOpacity onPress={() => {
+                setVocabId(item.id); // Đặt vocabId đã chọn
+                setModalVisibleedit(true); // Mở modal chỉnh sửa
+            }}>
+                <View style={styles.tableRow}>
+                    <Text style={styles.columnEn} numberOfLines={1} ellipsizeMode="tail">
+                        {item.englishWord}
+                    </Text>
+                    <Text style={styles.columnVn} numberOfLines={1} ellipsizeMode="tail">
+                        {item.vietnameseWord}
+                    </Text>
+                    <Text style={styles.columnType} numberOfLines={1} ellipsizeMode="tail">
+                        {item.wordType}
+                    </Text>
+                </View>
+            </TouchableOpacity>
+        ) : (
+            <View>
+                <View style={styles.tableRow}>
+                    <Text style={styles.columnEn} numberOfLines={1} ellipsizeMode="tail">
+                        {item.englishWord}
+                    </Text>
+                    <Text style={styles.columnVn} numberOfLines={1} ellipsizeMode="tail">
+                        {item.vietnameseWord}
+                    </Text>
+                    <Text style={styles.columnType} numberOfLines={1} ellipsizeMode="tail">
+                        {item.wordType}
+                    </Text>
+                </View>
             </View>
-        </TouchableOpacity>
+        )
     );
 
     return (
@@ -100,6 +131,7 @@ const DetailVocabularyDay = () => {
             <AppHeader />
             <View style={styles.containerbox}>
                 <View style={styles.header}>
+                    {currentUserId === lessonData.idUser ? (
                     <View style={styles.creator}>
                         <TouchableOpacity style={styles.buttonstudya} onPress={() => setModalVisibleeditlesson(true)}>
                             <View style={styles.buttonboxx}>
@@ -114,6 +146,9 @@ const DetailVocabularyDay = () => {
                             </View>
                         </TouchableOpacity>
                     </View>
+                    ) : (
+                        <View></View>
+                    )}
                 </View>
             </View>
             <View style={styles.dayInfo}>
@@ -125,7 +160,10 @@ const DetailVocabularyDay = () => {
                             <View style={styles.progress}></View>
                         </View>
                     </View>
-                    <TouchableOpacity style={styles.buttonstudy} onPress={() => setModalVisiblelearn(true)}>
+                    <TouchableOpacity style={styles.buttonstudy} onPress={() => {
+                            handleAddUserCourse();
+                            setModalVisiblelearn(true); // Hiển thị modal học
+                        }}>
                         <Text style={styles.reviewText}>Học</Text>
                     </TouchableOpacity>
                 </View>

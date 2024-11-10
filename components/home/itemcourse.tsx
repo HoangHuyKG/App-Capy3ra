@@ -3,10 +3,10 @@ import { View, Text, Image, StyleSheet } from 'react-native';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import AntDesign from '@expo/vector-icons/AntDesign';
 import { db } from '../../fireBaseConfig';
-import { collection, onSnapshot } from 'firebase/firestore'; // Import onSnapshot
+import { collection, onSnapshot } from 'firebase/firestore';
 import { TouchableOpacity } from 'react-native-gesture-handler';
 import { NavigationProp, useNavigation } from '@react-navigation/native';
-import { format } from 'date-fns'; // Thư viện để định dạng ngày giờ
+import { format } from 'date-fns';
 
 const CourseItem = () => {
   const [courses, setCourses] = useState([]);
@@ -16,13 +16,12 @@ const CourseItem = () => {
     const unsubscribe = onSnapshot(collection(db, 'Courses'), (snapshot) => {
       const coursesData = snapshot.docs.map(doc => {
         const data = doc.data();
-        const createdAt = data.createdAt ? data.createdAt.toDate() : null; // Chuyển đổi timestamp sang dạng Date
+        const createdAt = data.createdAt ? data.createdAt.toDate() : null;
         return { id: doc.id, ...data, createdAt };
       });
-      setCourses(coursesData); // Cập nhật state với dữ liệu mới
+      setCourses(coursesData);
     });
 
-    // Cleanup khi component bị unmount để tránh memory leaks
     return () => unsubscribe();
   }, []);
 
@@ -31,8 +30,9 @@ const CourseItem = () => {
       {courses.length > 0 ? (
         courses.map(course => (
           <View key={course.id} style={styles.cardContainer}>
-            <TouchableOpacity onPress={() => navigation.navigate("ReviewCourseScreen", { course: { ...course, createdAt: course.createdAt ? course.createdAt.toISOString() : null } })}
->
+            <TouchableOpacity 
+              onPress={() => navigation.navigate("ReviewCourseScreen", { courseId: course.id })}
+            >
               <View style={styles.header}>
                 <Image
                   source={{ uri: course.imageUrl || 'https://via.placeholder.com/150' }}

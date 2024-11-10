@@ -84,7 +84,7 @@ const EditCourse = ({ route }) => {
 
             await deleteDoc(doc(db, 'Courses', courseId));
             Alert.alert('Khóa học đã được xóa thành công!');
-            navigation.goBack();
+            navigation.navigate("CourseScreen");
         } catch (error) {
             console.error('Lỗi khi xóa khóa học và dữ liệu liên quan:', error);
             Alert.alert('Đã xảy ra lỗi khi xóa khóa học và dữ liệu liên quan.');

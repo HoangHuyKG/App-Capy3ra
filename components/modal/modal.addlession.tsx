@@ -4,12 +4,16 @@ import { Button } from 'react-native-paper';
 import { globalFont } from '../../utils/const';
 import { db } from '../../fireBaseConfig'; // Import cấu hình Firebase
 import { collection, query, where, onSnapshot, setDoc, doc } from 'firebase/firestore';
+import { useUser } from '../home/UserContext';
 
 const AddLessonModal = ({ modalVisible, setModalVisible, courseId }) => {
+  const { userInfo } = useUser();
+  const currentUserId = userInfo?.data?.user?.id;
   const [title, setTitle] = useState('');
+  const [idUser, setidUser] = useState(currentUserId);
   const [description, setDescription] = useState('');
   const [lessons, setLessons] = useState([]);
-
+  
   // Lắng nghe real-time cho collection Lessons với courseId
   useEffect(() => {
     const lessonsRef = collection(db, 'Lessons');
@@ -33,6 +37,7 @@ const AddLessonModal = ({ modalVisible, setModalVisible, courseId }) => {
         const lessonData = {
           lessonId,  // Thêm lessonId vào dữ liệu
           courseId,  // Sử dụng courseId từ props
+          idUser,  // Sử dụng courseId từ props
           title,
           description,
           createdAt: new Date(), // Thêm trường createdAt nếu cần
@@ -44,6 +49,7 @@ const AddLessonModal = ({ modalVisible, setModalVisible, courseId }) => {
         // Đóng modal và reset trường nhập liệu
         setModalVisible(false);
         setTitle('');
+        setidUser('');
         setDescription('');
       } catch (error) {
         alert('Lỗi khi thêm bài học: ' + error.message);
@@ -52,7 +58,6 @@ const AddLessonModal = ({ modalVisible, setModalVisible, courseId }) => {
       alert('Vui lòng điền đầy đủ thông tin');
     }
   };
-
   return (
     <Modal visible={modalVisible} animationType="slide" transparent={true}>
       <View style={styles.modalOverlay}>
@@ -69,6 +74,11 @@ const AddLessonModal = ({ modalVisible, setModalVisible, courseId }) => {
             placeholder="Mô tả bài học"
             value={description}
             onChangeText={setDescription}
+          />
+          <TextInput
+            style={[styles.input, { display: 'none' }]}
+            placeholder="idUser"
+            value={currentUserId}
           />
           <View style={styles.buttonContainer}>
             <Button mode="contained" onPress={handleAddLesson} style={styles.button}>
