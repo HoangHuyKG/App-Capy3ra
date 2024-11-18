@@ -3,6 +3,8 @@ import { View, Text, TouchableOpacity, StyleSheet, Modal } from 'react-native';
 import AntDesign from '@expo/vector-icons/AntDesign';
 import { NavigationProp, useNavigation } from '@react-navigation/native';
 import { globalFont } from '../../utils/const';
+import { addDoc, collection, doc, getDoc, getDocs, query, updateDoc, where } from 'firebase/firestore';
+import { db } from '../../fireBaseConfig';
 
 interface Vocabulary {
     englishWord: string;
@@ -14,11 +16,14 @@ interface Iprops {
     modalVisible: boolean;
     setModalVisible: (v: boolean) => void;
     vocabularies: Vocabulary[];
+    currentUserId: string
+    lessonId: string
+    courseId: string
 }
 
 const VocabularyCard = (props: Iprops) => {
     const navigation: NavigationProp<any> = useNavigation();
-    const { modalVisible, setModalVisible, vocabularies } = props;
+    const { modalVisible, setModalVisible, vocabularies, currentUserId, lessonId, courseId} = props;
     const [currentIndex, setCurrentIndex] = useState(0);
     const [currentScreen, setCurrentScreen] = useState('screen1');
     const [selectedOption, setSelectedOption] = useState('');
@@ -86,6 +91,7 @@ const VocabularyCard = (props: Iprops) => {
     };
 
     const handleNextVocabulary = () => {
+        handleCompleteLearning(vocabularies[currentIndex].wordId, currentUserId, lessonId);
         if (currentIndex + 1 === vocabularies.length) {
             setProgress(100);
             setCurrentScreen('screen4');
@@ -102,9 +108,174 @@ const VocabularyCard = (props: Iprops) => {
         }
     };
     
+    const handleStartLearning = async (vocabId, currentUserId, lessonId) => {
+        if (!currentUserId || !lessonId || !vocabId) {
+            console.log(currentUserId)
+            console.log(lessonId)
+            console.log(vocabId)
+            console.error("Missing required data for creating User_Progress: user_id, lesson_id, or vocab_id is undefined.");
+            return;
+        }
+        try {
+            const progress_id = `${currentUserId}_${lessonId}_${vocabId}`;
+            const progressDocSnapshot = query(
+                collection(db, 'User_Progress'),
+                where('progress_id', '==', progress_id)
+            );
+            const querySnapshot = await getDocs(progressDocSnapshot);
+            if (querySnapshot.empty) {
+                await addDoc(collection(db, 'User_Progress'), {
+                    progress_id: progress_id,
+                    user_id: currentUserId,
+                    lesson_id: lessonId,
+                    vocab_id: vocabId,
+                    status: 'đang học',
+                });
+                console.log("User_Progress record created successfully!");
+            }
+        } catch (error) {
+            console.error("Error adding User_Progress record: ", error);
+        }
+    };
     
 
+    const handleCompleteLearning = async (vocabId, currentUserId, lessonId) => {
+            try {
+                const progress_id = `${currentUserId}_${lessonId}_${vocabId}`;
+                
+                // Query để tìm tài liệu dựa trên progress_id
+                const progressDocSnapshot = query(
+                    collection(db, 'User_Progress'),
+                    where('progress_id', '==', progress_id)
+                );
+                const querySnapshot = await getDocs(progressDocSnapshot);
+        
+                if (!querySnapshot.empty) {
+                    // Lấy ID của tài liệu đầu tiên trong kết quả query
+                    const docId = querySnapshot.docs[0].id;
+        
+                    // Thực hiện cập nhật status
+                    const progressDocRef = doc(db, 'User_Progress', docId);
+                    await updateDoc(progressDocRef, {
+                        status: 'đã học',
+                    });
+                    updateCourseProgress(currentUserId, courseId);
 
+                } else {
+                    console.log("User_Progress record does not exist!");
+                }
+            } catch (error) {
+                console.error("Error updating User_Progress record: ", error);
+            }
+        };
+        const calculateLearningProgress = async (currentUserId: string, lessonId: string): Promise<number> => {
+            try {
+                // 1. Get total vocabulary count for the lesson
+                const vocabQuerySnapshot = await getDocs(
+                    query(collection(db, 'Vocabularies'), where('lessonId', '==', lessonId))
+                );
+                const totalVocabulary = vocabQuerySnapshot.size;
+        
+                // Check if there are no vocabularies for the lesson
+                if (totalVocabulary === 0) {
+                    console.warn(`No vocabularies found for lesson ${lessonId}.`);
+                    return 0;  // Return 0 if there are no vocabularies
+                }
+        
+                // 2. Get the count of vocabularies the user has learned for this lesson
+                const progressQuerySnapshot = await getDocs(
+                    query(
+                        collection(db, 'User_Progress'),
+                        where('user_id', '==', currentUserId),
+                        where('lesson_id', '==', lessonId),
+                        where('status', 'in', ['đã học']) // Learning statuses
+                    )
+                );
+                const learnedVocabulary = (progressQuerySnapshot.size)+1;
+        
+                // 3. Calculate progress as a percentage (as a number)
+                const progressPercentage = (learnedVocabulary / totalVocabulary) * 100;
+                
+                console.log(`Learning progress for lesson ${lessonId}: ${progressPercentage.toFixed(2)}%`);
+                return progressPercentage;  // Return the number
+            } catch (error) {
+                console.error("Error calculating learning progress: ", error);
+                return 0;  // Return 0 as a number in case of an error
+            }
+        };
+        
+        
+
+        
+        const updateCourseProgress = async (currentUserId, courseId) => {
+            try {
+                // 1. Lấy tất cả các bài học trong khóa học
+                const lessonsSnapshot = await getDocs(
+                    query(collection(db, 'Lessons'), where('courseId', '==', courseId))
+                );
+                const totalLessons = lessonsSnapshot.size;
+        
+                // Kiểm tra nếu không có bài học nào
+                if (totalLessons === 0) {
+                    console.error("Không tìm thấy bài học nào trong khóa học.");
+                    return;
+                }
+        
+                let totalVocabulary = 0;   // Tổng số từ vựng trong khóa học
+                let learnedVocabulary = 0; // Số từ vựng đã học trong khóa học
+        
+                // 2. Tính tổng số từ vựng và số từ vựng đã học cho từng bài học
+                for (const lessonDoc of lessonsSnapshot.docs) {
+                    const lessonId = lessonDoc.id;
+        
+                    // 2.1 Lấy số lượng từ vựng trong bài học
+                    const vocabQuerySnapshot = await getDocs(
+                        query(collection(db, 'Vocabularies'), where('lessonId', '==', lessonId))
+                    );
+                    const lessonTotalVocabulary = vocabQuerySnapshot.size;  // Số từ vựng của bài học
+                    totalVocabulary += lessonTotalVocabulary;  // Cộng số từ vựng vào tổng số từ vựng của khóa học
+        
+                    // 2.2 Lấy số lượng từ vựng đã học của người dùng trong bài học
+                    const learnedVocabQuerySnapshot = await getDocs(
+                        query(
+                            collection(db, 'User_Progress'),
+                            where('user_id', '==', currentUserId),
+                            where('lesson_id', '==', lessonId),
+                            where('status', 'in', ['đã học']) // Learning statuses
+                        )
+                    );
+                    learnedVocabulary += (learnedVocabQuerySnapshot.size);  // Cộng số từ vựng đã học vào tổng số từ vựng đã học
+                }
+        
+                // 3. Tính tiến độ khóa học dựa trên số từ vựng đã học
+                const courseProgress = totalVocabulary > 0 ? (learnedVocabulary / totalVocabulary) * 100 : 0;
+        
+                // 4. Cập nhật tiến độ khóa học trong bảng User_Course nếu tiến độ hợp lệ
+                const userCourseQuerySnapshot = await getDocs(
+                    query(
+                        collection(db, 'User_Course'),
+                        where('user_id', '==', currentUserId),
+                        where('course_id', '==', courseId)
+                    )
+                );
+        
+                if (!userCourseQuerySnapshot.empty && !isNaN(courseProgress)) {
+                    const userCourseDocRef = userCourseQuerySnapshot.docs[0].ref;
+                    await updateDoc(userCourseDocRef, { progress: courseProgress.toFixed(2) });
+                } else {
+                    console.warn("Không thể cập nhật tiến độ khóa học: không tìm thấy bản ghi người dùng-khóa học hoặc tiến độ là NaN.");
+                }
+        
+            } catch (error) {
+                console.error("Lỗi khi cập nhật tiến độ khóa học: ", error);
+            }
+        };
+        
+        
+        
+        
+    
+    
 
 
     const renderScreen = () => {
@@ -138,10 +309,17 @@ const VocabularyCard = (props: Iprops) => {
                             </TouchableOpacity>
                         </View>
 
-                        <TouchableOpacity style={styles.nextButton} onPress={() => setCurrentScreen('screen2')}>
+                        <TouchableOpacity 
+                            style={styles.nextButton} 
+                            onPress={() => {
+                                handleStartLearning(currentVocabulary.wordId, currentUserId, lessonId); // Gọi hàm với từ vựng hiện tại
+                                setCurrentScreen('screen2');
+                            }}
+                        >
                             <Text style={styles.nextButtonText}>Tiếp theo</Text>
                             <AntDesign name="arrowright" size={24} color="white" style={styles.icon} />
                         </TouchableOpacity>
+
                     </View>
 
                 );
@@ -263,8 +441,8 @@ const VocabularyCard = (props: Iprops) => {
                 setActionTaken(false); // Reset trạng thái hành động
                 setIsSelecting(true); // Đặt lại trạng thái chọn
                 setTotalScore(0); // Đặt lại trạng thái chọn
-                setProgress(0)
-
+                setProgress(0);
+                updateCourseProgress(currentUserId, courseId);
 
             }}
         >
@@ -282,7 +460,7 @@ const VocabularyCard = (props: Iprops) => {
                         setIsSelecting(true); // Đặt lại trạng thái chọn
                         setTotalScore(0); // Đặt lại trạng thái chọn
                         setProgress(0)
-
+                        updateCourseProgress(currentUserId, courseId);
                     }}>
                         <AntDesign name="closecircle" size={30} color="white" />
                     </TouchableOpacity>

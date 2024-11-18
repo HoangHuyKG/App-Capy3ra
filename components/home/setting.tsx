@@ -87,6 +87,9 @@ const SettingScreen = () => {
           console.error("Sign-out error: ", error);
         }
       };
+      const handleLogin = () => {
+        navigation.navigate("StartedLoginScreen"); // Điều hướng đến màn hình đăng nhập
+    };
     return (
 
         <ScrollView style={styles.container}>
@@ -95,7 +98,11 @@ const SettingScreen = () => {
             <View style={styles.containerview}>
 
             <View style={styles.header}>
-                <Image source={{uri: userInfo?.data?.user?.photo}} style={styles.profileImage} />
+                <Image source={
+                        userInfo?.data?.user?.photo
+                            ? { uri: userInfo.data.user.photo }
+                            : ImagesAssets.unknowuser // Đường dẫn tới ảnh mặc định
+                    } style={styles.profileImage} />
                 <Text style={styles.name}>{userInfo?.data?.user?.name}</Text>
                 <Text style={styles.contact}>{userInfo?.data?.user?.email}</Text>
             </View>
@@ -109,31 +116,19 @@ const SettingScreen = () => {
                 <Switch value={notificationsEnabled} onValueChange={toggleNotifications} style={styles.switchbox}/>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.option} onPress={()=> navigation.navigate("LanguageSelection")}>
-                <Text style={styles.optionText}>Ngôn ngữ</Text>
-                <Text style={styles.optionRightText}>Tiếng Việt</Text>
-            </TouchableOpacity>
 
+{/* 
             <TouchableOpacity style={styles.option} onPress={()=> navigation.navigate("SettingLearningScreen")}>
                 <Text style={styles.optionText}>Cài đặt chế độ âm thanh và học tập</Text>
-            </TouchableOpacity>
+            </TouchableOpacity> */}
 
-            <TouchableOpacity style={styles.option} onPress={toggleTheme}>
-                <Text style={styles.optionText}>Giao diện</Text>
-                <Text style={styles.optionRightText}>{theme}</Text>
-            </TouchableOpacity>
 
-            <TouchableOpacity style={styles.option}>
-                <Text style={styles.optionText}>Trợ giúp</Text>
-            </TouchableOpacity>
 
-            <TouchableOpacity style={styles.option} onPress={handleLogout}>
-                <Text style={styles.optionText}>Đăng xuất</Text>
-            </TouchableOpacity>
+                <TouchableOpacity style={styles.option} onPress={userInfo ? handleLogout : handleLogin}>
+                    <Text style={styles.optionText}>{userInfo ? "Đăng xuất" : "Đăng nhập"}</Text>
+                </TouchableOpacity>
 
-            <TouchableOpacity style={styles.option}>
-                <Text style={styles.optionText}>Xóa tài khoản</Text>
-            </TouchableOpacity>
+
             </View>
         </ScrollView>
     );

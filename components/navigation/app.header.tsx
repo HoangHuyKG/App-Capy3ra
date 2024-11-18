@@ -47,10 +47,14 @@ const AppHeader = () => {
                     source={ImagesAssets.imagelogo}
                 />
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => navigation.navigate("SettingScreen", {userInfo})}>
+            <TouchableOpacity onPress={userInfo ? () => navigation.navigate("SettingScreen", {userInfo}): () => navigation.navigate("StartedLoginScreen")} >
                 <Image
                     style={styles.imageuser}
-                    source={{ uri: userInfo?.data?.user?.photo}}
+                    source={
+                        userInfo?.data?.user?.photo
+                            ? { uri: userInfo.data.user.photo }
+                            : ImagesAssets.unknowuser // Đường dẫn tới ảnh mặc định
+                    }
 
                 />
             </TouchableOpacity>

@@ -95,7 +95,7 @@ const ReviewCourseScreen = () => {
                             <TouchableOpacity 
                                 key={lesson.id} 
                                 style={styles.dayCard} 
-                                onPress={() => navigation.navigate("DetailVocabularyDay", { lessonId: lesson.id })}
+                                onPress={() => navigation.navigate("DetailVocabularyDay", { lessonId: lesson.id, courseData: courseData})}
                             >
                                 <Image
                                     source={ImagesAssets.logodetail}

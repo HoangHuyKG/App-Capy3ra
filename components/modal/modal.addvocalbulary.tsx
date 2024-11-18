@@ -4,9 +4,10 @@ import { Button } from 'react-native-paper';
 import DropDownPicker from 'react-native-dropdown-picker';
 import { globalFont } from '../../utils/const';
 import { db } from '../../fireBaseConfig';
-import { collection, setDoc, doc } from 'firebase/firestore';
+import { collection, setDoc, doc, query, where, getDocs, updateDoc } from 'firebase/firestore';
 
-const AddVocabularyModal = ({ modalVisible, setModalVisible, lessonId }) => {
+const AddVocabularyModal = ({ modalVisible, setModalVisible, lessonId,
+}) => {
   const [englishWord, setEnglishWord] = useState('');
   const [vietnameseWord, setVietnameseWord] = useState('');
   const [wordType, setWordType] = useState('');
@@ -18,14 +19,15 @@ const AddVocabularyModal = ({ modalVisible, setModalVisible, lessonId }) => {
     { label: 'Tính từ', value: 'Tính từ' },
     { label: 'Trạng từ', value: 'Trạng từ' },
   ]);
+  
 
   const handleAddWord = async () => {
-    
-  
+
+
     if (englishWord && vietnameseWord && wordType && lessonId) {
       try {
         const wordId = `vocab_${Date.now()}`;
-  
+
         const vocabularyData = {
           wordId,
           lessonId, // Đảm bảo lessonId có giá trị
@@ -34,9 +36,9 @@ const AddVocabularyModal = ({ modalVisible, setModalVisible, lessonId }) => {
           wordType,
           createdAt: new Date(),
         };
-  
+
         await setDoc(doc(db, 'Vocabularies', wordId), vocabularyData);
-  
+        
         setModalVisible(false);
         setEnglishWord('');
         setVietnameseWord('');
@@ -48,7 +50,7 @@ const AddVocabularyModal = ({ modalVisible, setModalVisible, lessonId }) => {
       alert('Vui lòng điền đầy đủ thông tin và chắc chắn rằng lessonId không bị thiếu');
     }
   };
-  
+
 
   return (
     <Modal visible={modalVisible} animationType="slide" transparent={true}>

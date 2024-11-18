@@ -76,30 +76,57 @@ const ModalMenu = ({ modalVisible, setModalVisible, courseId, userId }: Iprops) 
       Alert.alert("Lỗi", "Thiếu thông tin cần thiết.");
       return;
     }
-
+  
     try {
+      const userProgressRef = collection(db, "User_Progress");
+      const lessonsRef = collection(db, "Lessons");
+  
+      // Lấy danh sách bài học
+      const lessonsQuery = query(lessonsRef, where("courseId", "==", courseId));
+      const lessonsSnapshot = await getDocs(lessonsQuery);
+      const lessonIds = lessonsSnapshot.docs.map((doc) => doc.id);
+  
+  
+      if (lessonIds.length > 0) {
+        for (let i = 0; i < lessonIds.length; i += 10) {
+          const batchIds = lessonIds.slice(i, i + 10);
+          const progressQuery = query(
+            userProgressRef,
+            where("user_id", "==", userId),
+            where("lesson_id", "in", batchIds)
+          );
+          const progressSnapshot = await getDocs(progressQuery);
+  
+  
+          if (!progressSnapshot.empty) {
+            const deletePromises = progressSnapshot.docs.map((doc) => deleteDoc(doc.ref));
+            await Promise.all(deletePromises);
+          }
+        }
+      }
+  
+      // Xóa dữ liệu trong bảng User_Course
       const userCourseRef = collection(db, "User_Course");
-      const q = query(userCourseRef, where("user_id", "==", userId), where("course_id", "==", courseId));
-      const querySnapshot = await getDocs(q);
-
-      if (querySnapshot.empty) {
+      const courseQuery = query(userCourseRef, where("user_id", "==", userId), where("course_id", "==", courseId));
+      const courseSnapshot = await getDocs(courseQuery);
+  
+      if (courseSnapshot.empty) {
         Alert.alert("Thông báo", "Không tìm thấy khóa học để rời.");
         return;
       }
-
-      // Xóa tất cả các tài liệu tìm thấy
-      querySnapshot.forEach(async (doc) => {
-        await deleteDoc(doc.ref);
-      });
-
+  
+      const courseDeletePromises = courseSnapshot.docs.map((doc) => deleteDoc(doc.ref));
+      await Promise.all(courseDeletePromises);
+  
       Alert.alert("Thông báo", "Bạn đã rời khỏi khóa học thành công.");
-      setModalVisible(false); // Đóng modal sau khi hoàn tất
-
+      setModalVisible(false);
+  
     } catch (error) {
       console.error("Lỗi khi rời khóa học:", error);
       Alert.alert("Lỗi", "Không thể rời khóa học. Vui lòng thử lại.");
     }
   };
+  
 
   return (
     <Modal

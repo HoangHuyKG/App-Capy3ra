@@ -6,6 +6,7 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { globalFont } from "../../utils/const";
 import ModalLearnOrTeach from "../modal/modal.learnorteach";
 import { useState } from "react";
+import { NavigationProp, useNavigation } from "@react-navigation/native";
 const styles = StyleSheet.create({
     container: {
         flex: 1,
@@ -64,6 +65,7 @@ const styles = StyleSheet.create({
 })
 const TeachScreen = () => {
     const [modalVisible, setModalVisible] = useState(false);
+    const navigation: NavigationProp<RootStackParamList> = useNavigation();
 
     return (
         <View style={styles.container}>
@@ -82,7 +84,7 @@ const TeachScreen = () => {
                 <Text style={styles.description}>
                     Bạn vẫn chưa tạo ra một khóa học nào. Để tạo một khóa học, chia sẻ với bạn bè hoặc học viên và xem các thống kê, hãy nhấn vào nút bên dưới.
                 </Text>
-                <TouchableOpacity style={styles.button}>
+                <TouchableOpacity style={styles.button} onPress={()=> navigation.navigate("CourseScreen")}>
                     <Text style={styles.buttonText}>Tạo khóa học</Text>
                 </TouchableOpacity>
             </View>

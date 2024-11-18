@@ -6,7 +6,7 @@ import AppHeader from '../navigation/app.header';
 import { globalFont } from '../../utils/const';
 import AntDesign from '@expo/vector-icons/AntDesign';
 import { db } from '../../fireBaseConfig';
-import { doc, collection, query, where, onSnapshot, addDoc } from 'firebase/firestore';
+import { doc, collection, query, where, onSnapshot, addDoc, getDocs } from 'firebase/firestore';
 import AddVocabularyModal from '../modal/modal.addvocalbulary';
 import VocabularyCard from '../modal/modal.vocabularycard';
 import EditVocabularyModal from '../modal/modal.editvocalbulary';
@@ -22,12 +22,45 @@ const DetailVocabularyDay = () => {
     const [vocabularies, setVocabularies] = useState([]);
     const [loading, setLoading] = useState(true);
     const [vocabId, setVocabId] = useState(null); // State to store selected vocabId
+    const [progressPercentage, setProgressPercentage] = useState(0);
     const route = useRoute();
     const { lessonId } = route.params;
     const { userInfo } = useUser();
     const currentUserId = userInfo?.data?.user?.id;
-    const { course } = route.params; // Lấy dữ liệu từ params
+    const { courseData } = route.params;
+
+    const calculateLearningProgress = async (currentUserId, lessonId) => {
+        try {
+            const vocabQuerySnapshot = await getDocs(
+                query(collection(db, 'Vocabularies'), where('lessonId', '==', lessonId))
+            );
+            const totalVocabulary = vocabQuerySnapshot.size;
+
+            if (totalVocabulary === 0) {
+                console.warn(`No vocabularies found for lesson ${lessonId}.`);
+                return 0;
+            }
+
+            const progressQuerySnapshot = await getDocs(
+                query(
+                    collection(db, 'User_Progress'),
+                    where('user_id', '==', currentUserId),
+                    where('lesson_id', '==', lessonId),
+                    where('status', 'in', ['đã học']) // Learning statuses
+                )
+            );
+            const learnedVocabulary = progressQuerySnapshot.size;
+            const progressPercentage = (learnedVocabulary / totalVocabulary) * 100;
+            
+            return progressPercentage;
+        } catch (error) {
+            console.error("Error calculating learning progress: ", error);
+            return 0;
+        }
+    };
+   
     useEffect(() => {
+        // Fetch Lesson Data in Real-Time
         const fetchLessonData = () => {
             if (lessonId) {
                 const lessonDocRef = doc(db, 'Lessons', lessonId);
@@ -40,36 +73,60 @@ const DetailVocabularyDay = () => {
                 }, (error) => {
                     console.error("Error fetching lesson data: ", error);
                 });
-
+    
                 return unsubscribeLesson;
             }
         };
-        
+    
+        // Fetch Vocabulary Data in Real-Time
         const fetchVocabularyData = () => {
             const vocabCollection = collection(db, 'Vocabularies');
             const vocabQuery = query(vocabCollection, where('lessonId', '==', lessonId));
-
-            const unsubscribeVocab = onSnapshot(vocabQuery, (snapshot) => {
+        
+            const unsubscribeVocab = onSnapshot(vocabQuery, async (snapshot) => {
                 const vocabList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 setVocabularies(vocabList);
+                // Cập nhật lại tiến trình học sau mỗi thay đổi từ vựng
+                const progress = await calculateLearningProgress(currentUserId, lessonId);
+                setProgressPercentage(progress);
             }, (error) => {
                 console.error("Error fetching vocabulary data: ", error);
             });
-
+        
             return unsubscribeVocab;
         };
-
-        setLoading(true);
+    
+        // Real-Time Progress Update
+        const updateProgressRealTime = () => {
+            const progressQuery = query(
+                collection(db, 'User_Progress'),
+                where('user_id', '==', currentUserId),
+                where('lesson_id', '==', lessonId),
+                where('status', 'in', ['đã học'])
+            );
+            const unsubscribeProgress = onSnapshot(progressQuery, async () => {
+                const progress = await calculateLearningProgress(currentUserId, lessonId);
+                setProgressPercentage(progress);
+            });
+            return unsubscribeProgress;
+        };
+    
+        setLoading(true); // Set loading state to true initially
         const unsubscribeLesson = fetchLessonData();
         const unsubscribeVocab = fetchVocabularyData();
-        setLoading(false);
-
-        // Clean up subscriptions on unmount
+        const unsubscribeProgress = updateProgressRealTime();
+    
+        // Update loading state once data is fetched
+        const timeoutId = setTimeout(() => setLoading(false), 500); // Set a small delay to handle async updates
+    
         return () => {
+            clearTimeout(timeoutId);
             unsubscribeLesson();
             unsubscribeVocab();
+            unsubscribeProgress();
         };
-    }, [lessonId]);
+    }, [lessonId, currentUserId]);
+    
 
     if (loading) {
         return <Text>Loading...</Text>;
@@ -78,24 +135,34 @@ const DetailVocabularyDay = () => {
     if (!lessonData) {
         return <Text>Không tìm thấy dữ liệu bài học.</Text>;
     }
+    
     const handleAddUserCourse = async () => {
         try {
-            await addDoc(collection(db, 'User_Course'), {
-                user_course_id: `${currentUserId}_${lessonId}`,
-                user_id: currentUserId,
-                course_id: lessonData.courseId, // Sử dụng ID của khóa học
-                progress: 0 // Giá trị phần trăm hoàn thành ban đầu
-            });
-            console.log("User_Course record added successfully!");
+            const userCourseId = `${currentUserId}_${lessonId}`;
+            const userCourseQuery = query(
+                collection(db, 'User_Course'),
+                where('course_id', '==', courseData.courseId)
+            );
+            const querySnapshot = await getDocs(userCourseQuery);
+
+            if (querySnapshot.empty) {
+                await addDoc(collection(db, 'User_Course'), {
+                    user_course_id: userCourseId,
+                    user_id: currentUserId,
+                    course_id: lessonData.courseId,
+                    progress: 0 
+                });
+            }
         } catch (error) {
-            console.error("Error adding User_Course record: ", error);
+            console.error("Error checking or adding User_Course record: ", error);
         }
     };
+
     const renderItem = ({ item }) => (
-        currentUserId === lessonData.idUser ? (
+        currentUserId === courseData.idUser ? (
             <TouchableOpacity onPress={() => {
-                setVocabId(item.id); // Đặt vocabId đã chọn
-                setModalVisibleedit(true); // Mở modal chỉnh sửa
+                setVocabId(item.id);
+                setModalVisibleedit(true);
             }}>
                 <View style={styles.tableRow}>
                     <Text style={styles.columnEn} numberOfLines={1} ellipsizeMode="tail">
@@ -131,7 +198,7 @@ const DetailVocabularyDay = () => {
             <AppHeader />
             <View style={styles.containerbox}>
                 <View style={styles.header}>
-                    {currentUserId === lessonData.idUser ? (
+                    {currentUserId === courseData.idUser ? (
                     <View style={styles.creator}>
                         <TouchableOpacity style={styles.buttonstudya} onPress={() => setModalVisibleeditlesson(true)}>
                             <View style={styles.buttonboxx}>
@@ -157,12 +224,12 @@ const DetailVocabularyDay = () => {
                     <Text style={styles.dayText}>{lessonData.title}</Text>
                     <View style={styles.progressBarContainer}>
                         <View style={styles.progressBar}>
-                            <View style={styles.progress}></View>
+                        <View style={[styles.progress, { width: `${progressPercentage}%` }]} />
                         </View>
                     </View>
                     <TouchableOpacity style={styles.buttonstudy} onPress={() => {
                             handleAddUserCourse();
-                            setModalVisiblelearn(true); // Hiển thị modal học
+                            setModalVisiblelearn(true);
                         }}>
                         <Text style={styles.reviewText}>Học</Text>
                     </TouchableOpacity>
@@ -181,34 +248,21 @@ const DetailVocabularyDay = () => {
                         <Text style={styles.headerText}>Từ loại</Text>
                     </View>
                 </View>
+
                 <FlatList
                     data={vocabularies}
                     renderItem={renderItem}
                     keyExtractor={(item) => item.id}
-                    contentContainerStyle={styles.wordListContent}
                 />
             </View>
 
-            <AddVocabularyModal
-                modalVisible={modalVisible}
-                setModalVisible={setModalVisible}
-                lessonId={lessonId}
-            />
-            <VocabularyCard modalVisible={modalVisiblelearn} setModalVisible={setModalVisiblelearn} vocabularies={vocabularies} />
-            <EditVocabularyModal 
-                modalVisible={modalVisibleedit} 
-                setModalVisible={setModalVisibleedit} 
-                vocabId={vocabId} // Pass the vocabId to the modal
-            />
-            <EditLessonModal
-                modalVisible={modalVisibleeditlesson}
-                setModalVisible={setModalVisibleeditlesson}
-                lessonId={lessonId}
-            />
+            <AddVocabularyModal modalVisible={modalVisible} setModalVisible={setModalVisible} lessonId={lessonId} />
+            <VocabularyCard modalVisible={modalVisiblelearn} setModalVisible={setModalVisiblelearn} vocabularies={vocabularies} currentUserId={currentUserId} lessonId={lessonId} courseId={courseData.courseId}/>
+            <EditVocabularyModal modalVisible={modalVisibleedit} setModalVisible={setModalVisibleedit} vocabId={vocabId} />
+            <EditLessonModal modalVisible={modalVisibleeditlesson} setModalVisible={setModalVisibleeditlesson} lessonId={lessonId} />
         </View>
     );
 };
-
 
 const styles = StyleSheet.create({
 
@@ -292,7 +346,6 @@ const styles = StyleSheet.create({
     },
     progress: {
         height: '100%',
-        width: '100%',
         backgroundColor: '#02929A',
     },
     headerTexttitle: {
