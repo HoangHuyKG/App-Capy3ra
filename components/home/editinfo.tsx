@@ -74,6 +74,7 @@ const EditProfileScreen = () => {
                 }, { merge: true }); // merge: true sẽ cập nhật dữ liệu mà không xóa dữ liệu hiện có
                 Alert.alert("Thành công", "Cập nhật thông tin thành công!");
                 // Có thể thêm thông báo cho người dùng tại đây
+                navigation.navigate("SettingScreen");
             }
         } catch (error) {
             Alert.alert("Thất bại", "Cập nhật thông tin thất bại!");
@@ -92,14 +93,7 @@ const EditProfileScreen = () => {
                     style={styles.input}
                     underlineColor="transparent"
                 />
-                <TextInput
-                    label="Địa chỉ email"
-                    value={email}
-                    onChangeText={text => setEmail(text)}
-                    style={styles.input}
-                    keyboardType="email-address"
-                    underlineColor="transparent"
-                />
+            
                 <TextInput
                     label="Số điện thoại"
                     value={phone}

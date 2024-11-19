@@ -5,11 +5,12 @@ import { ScrollView, Switch, TextInput } from "react-native-gesture-handler"
 import Ionicons from '@expo/vector-icons/Ionicons';
 import CourseItem from "./itemcourse";
 import { globalFont } from "../../utils/const";
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { ImagesAssets } from "../../assets/images/ImagesAssets";
 import { NavigationProp, useNavigation, useRoute } from "@react-navigation/native";
 import { useUser } from "./UserContext";
-import { auth } from '../../fireBaseConfig'; // Đảm bảo đường dẫn này đúng
+import { auth, db } from '../../fireBaseConfig'; // Đảm bảo đường dẫn này đúng
+import { doc, getDoc, onSnapshot } from "firebase/firestore";
 
 const styles = StyleSheet.create({
     container: {
@@ -90,6 +91,26 @@ const SettingScreen = () => {
       const handleLogin = () => {
         navigation.navigate("StartedLoginScreen"); // Điều hướng đến màn hình đăng nhập
     };
+    const [name, setName] = useState('');
+  
+
+    useEffect(() => {
+        const user = auth.currentUser; // Lấy thông tin người dùng hiện tại
+        if (!user) return;
+
+        const userDocRef = doc(db, 'Users', user.uid); // Tham chiếu tài liệu của người dùng
+        const unsubscribe = onSnapshot(userDocRef, (doc) => {
+            if (doc.exists()) {
+                const userData = doc.data();
+                setName(userData.name || 'Tên chưa được cập nhật');
+             
+            } else {
+                console.log("Không tìm thấy tài liệu người dùng.");
+            }
+        });
+
+        return () => unsubscribe(); // Hủy lắng nghe khi component bị unmount
+    }, []);
     return (
 
         <ScrollView style={styles.container}>
@@ -103,7 +124,7 @@ const SettingScreen = () => {
                             ? { uri: userInfo.data.user.photo }
                             : ImagesAssets.unknowuser // Đường dẫn tới ảnh mặc định
                     } style={styles.profileImage} />
-                <Text style={styles.name}>{userInfo?.data?.user?.name}</Text>
+                <Text style={styles.name}>{name || 'Tên chưa được cập nhật'}</Text>
                 <Text style={styles.contact}>{userInfo?.data?.user?.email}</Text>
             </View>
 

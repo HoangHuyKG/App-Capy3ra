@@ -2,48 +2,60 @@ import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, TextInput, View, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import AppHeader from '../navigation/app.header';
-import { db } from '../../fireBaseConfig';
+import { db, auth } from '../../fireBaseConfig';
 import { globalFont } from '../../utils/const';
-import { collection, addDoc, onSnapshot, updateDoc } from 'firebase/firestore';
+import { collection, addDoc, onSnapshot, updateDoc, doc, getDoc } from 'firebase/firestore';
 import { useUser } from './UserContext';
 import { NavigationProp, useNavigation } from '@react-navigation/native';
 
 const CreateCourseScreen = () => {
     const { userInfo } = useUser(); // Lấy userInfo từ context
     const [courseId, setCourseId] = useState('');
-    const [createdBy, setCreatedBy] = useState('');
+    const [createdBy, setCreatedBy] = useState(''); // Sẽ tự động lấy
     const [description, setDescription] = useState('');
     const [language, setLanguage] = useState('');
     const [title, setTitle] = useState('');
     const [imageUrl, setImageUrl] = useState('');
-    const [courses, setCourses] = useState([]); // State để lưu các khóa học real-time
-    const [imageUser, setImageUser] = useState(userInfo?.data?.user?.photo || ''); // Đặt giá trị ban đầu đúng
-    const [idUser, setidUser] = useState(userInfo?.data?.user?.id || ''); // Đặt giá trị ban đầu đúng
+    const [imageUser, setImageUser] = useState('');
+    const [idUser, setidUser] = useState('');
     const navigation: NavigationProp<RootStackParamList> = useNavigation();
 
-    // Sử dụng onSnapshot để lắng nghe real-time
+    // Lấy thông tin người dùng từ Firestore hoặc UserContext
     useEffect(() => {
-        const unsubscribe = onSnapshot(collection(db, 'Courses'), (snapshot) => {
-            const newCourses = snapshot.docs.map(doc => ({
-                id: doc.id,
-                ...doc.data()
-            }));
-            setCourses(newCourses); // Cập nhật state với dữ liệu mới
-        });
+        const fetchUserData = async () => {
+            try {
+                const user = auth.currentUser;
+                if (user) {
+                    const userDoc = await getDoc(doc(db, 'Users', user.uid));
+                    if (userDoc.exists()) {
+                        const userData = userDoc.data();
+                        setCreatedBy(userData.name || ''); // Tên người tạo
+                        setImageUser(userData.photo || ''); // Ảnh người tạo
+                        setidUser(user.uid); // ID người dùng
+                    }
+                }
+            } catch (error) {
+                console.error("Lỗi khi lấy thông tin người dùng: ", error);
+            }
+        };
 
-        // Cleanup subscription khi component bị unmount
-        return () => unsubscribe();
-    }, []);
+        if (!userInfo) {
+            fetchUserData(); // Truy vấn Firestore nếu userInfo không tồn tại
+        } else {
+            // Sử dụng dữ liệu từ UserContext
+            setCreatedBy(userInfo.data.user.name || '');
+            setImageUser(userInfo.data.user.photo || '');
+            setidUser(userInfo.data.user.id || '');
+        }
+    }, [userInfo]);
 
     const handleCreateCourse = async () => {
         if (!createdBy || !description || !language || !title || !imageUrl || !imageUser || !idUser) {
             Alert.alert("Lỗi", "Vui lòng điền đầy đủ thông tin");
             return;
         }
-    
+
         try {
-            
-            // Tạo tài liệu mới trong Firestore với ID tự động và nhận lại tham chiếu `docRef`
             const docRef = await addDoc(collection(db, 'Courses'), {
                 created_by: createdBy,
                 description,
@@ -54,42 +66,30 @@ const CreateCourseScreen = () => {
                 createdAt: new Date(),
                 idUser,
             });
-    
-            // Sử dụng `updateDoc` để cập nhật trường `course_id` với ID tài liệu tự động tạo
+
             await updateDoc(docRef, { courseId: docRef.id });
-    
+
             Alert.alert("Thành công", "Khóa học đã được tạo thành công");
             navigation.navigate("CourseScreen");
-    
-            // Đặt lại các trường nhập liệu về giá trị ban đầu
-            setCreatedBy('');
+
+            // Reset lại form
             setDescription('');
             setLanguage('');
             setTitle('');
             setImageUrl('');
-            setImageUser('');
-            setidUser('');
         } catch (error) {
             Alert.alert("Lỗi", "Không thể tạo khóa học, vui lòng thử lại");
             console.error(error);
         }
     };
-    
 
     return (
         <View style={styles.container}>
             <AppHeader />
             <ScrollView style={styles.containerbox}>
                 <View style={styles.formContainer}>
-                  
-
                     <Text style={styles.label}>Người tạo</Text>
-                    <TextInput
-                        style={styles.input}
-                        placeholder="Nhập tên người tạo"
-                        value={createdBy}
-                        onChangeText={setCreatedBy}
-                    />
+                    <Text style={styles.input}>{createdBy || "Đang tải..."}</Text>
 
                     <Text style={styles.label}>Mô tả</Text>
                     <TextInput
@@ -135,110 +135,22 @@ const CreateCourseScreen = () => {
                         <Text style={styles.buttonText}>Tạo khóa học</Text>
                     </TouchableOpacity>
                 </View>
-
-
             </ScrollView>
         </View>
     );
 };
 
-
-
-
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: '#e6f4f5',
-    },
-    containerbox: {
-        flex: 1,
-        backgroundColor: '#e6f4f5',
-        padding: 20
-    },
-    header: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        backgroundColor: '#02929A',
-        paddingVertical: 10,
-        paddingHorizontal: 16,
-        borderBottomLeftRadius: 20,
-        borderBottomRightRadius: 20,
-    },
-    headerText: {
-        fontSize: 18,
-        color: '#fff',
-        fontFamily: globalFont
-    },
-    headerTextSelected: {
-        fontSize: 18,
-        color: '#fff',
-        textDecorationLine: 'underline',
-        fontFamily: globalFont
-
-    },
-    avatar: {
-        height: 40,
-        width: 40,
-        borderRadius: 20,
-        backgroundColor: '#fff',
-    },
-    formContainer: {
-        marginTop: 20,
-    },
-    label: {
-        fontSize: 16,
-        marginBottom: 8,
-        color: '#333',
-        fontFamily: globalFont
-
-    },
-    input: {
-        borderColor: '#ddd',
-        borderWidth: 1,
-        borderRadius: 10,
-        marginBottom: 16,
-        padding: 10,
-        backgroundColor: '#fff',
-    },
-    pickerContainer: {
-        display: 'flex',
-        justifyContent: 'center',
-        padding: 10,
-        borderWidth: 1,
-        borderRadius: 10,
-        borderColor: '#ddd',
-        marginBottom: 16,
-        backgroundColor: '#fff',
-    },
-    picker: {
-        height: 30,
-        width: '100%',
-    },
-    textArea: {
-        padding: 15,
-        height: 100,
-        borderColor: '#ddd',
-        borderWidth: 1,
-        borderRadius: 5,
-        marginBottom: 16,
-        paddingHorizontal: 8,
-        backgroundColor: '#fff',
-        textAlignVertical: 'top'
-    },
-    button: {
-        marginTop: 20,
-        backgroundColor: '#02929A',
-        paddingVertical: 12,
-        borderRadius: 5,
-        alignItems: 'center',
-    },
-    buttonText: {
-        color: '#fff',
-        fontSize: 18,
-        fontFamily: globalFont
-
-    },
+    container: { flex: 1, backgroundColor: '#e6f4f5' },
+    containerbox: { flex: 1, backgroundColor: '#e6f4f5', padding: 20 },
+    formContainer: { marginTop: 20 },
+    label: { fontSize: 16, marginBottom: 8, color: '#333', fontFamily: globalFont },
+    input: { borderColor: '#ddd', borderWidth: 1, borderRadius: 10, marginBottom: 16, padding: 10, backgroundColor: '#fff' },
+    pickerContainer: { justifyContent: 'center', padding: 10, borderWidth: 1, borderRadius: 10, borderColor: '#ddd', marginBottom: 16, backgroundColor: '#fff' },
+    picker: { height: 30, width: '100%' },
+    textArea: { padding: 15, height: 100, borderColor: '#ddd', borderWidth: 1, borderRadius: 5, marginBottom: 16, backgroundColor: '#fff', textAlignVertical: 'top' },
+    button: { marginTop: 20, backgroundColor: '#02929A', paddingVertical: 12, borderRadius: 5, alignItems: 'center' },
+    buttonText: { color: '#fff', fontSize: 18, fontFamily: globalFont },
 });
 
 export default CreateCourseScreen;
