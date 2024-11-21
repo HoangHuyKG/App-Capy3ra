@@ -55,8 +55,6 @@ const CourseItem = () => {
 
                 <View style={styles.statsContainer}>
                   <View style={styles.stat}>
-                    <MaterialIcons name="groups" size={24} color="black" />
-                    <Text style={styles.statText}>22k</Text>
                   </View>
                   <View style={styles.stat}>
                     <AntDesign name="clockcircleo" size={24} color="black" />
@@ -70,7 +68,7 @@ const CourseItem = () => {
           </View>
         ))
       ) : (
-        <Text>No courses found</Text>
+        <Text>Không có khóa học nào </Text>
       )}
     </View>
   );

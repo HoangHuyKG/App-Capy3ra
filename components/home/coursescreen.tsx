@@ -151,14 +151,14 @@ const CourseScreen = () => {
 
             <View style={styles.container}>
 
-                <View style={styles.searchContainer}>
+                {/* <View style={styles.searchContainer}>
                     <TextInput
                         style={styles.searchInput}
                         placeholder="Tìm kiếm..."
                         placeholderTextColor="#999"
                     />
                     <Ionicons name="search" size={24} color="black" style={styles.searchIcon} />
-                </View>
+                </View> */}
 
                 <ScrollView style={styles.courseList}>
           

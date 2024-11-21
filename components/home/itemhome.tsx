@@ -168,7 +168,8 @@ const styles = StyleSheet.create({
 
 
 const ItemHome = ({ userId }) => {
-    const navigation = useNavigation();
+  const navigation: NavigationProp<any> = useNavigation();
+
     const [courses, setCourses] = useState([]);
     const [userCourses, setUserCourses] = useState([]);
     const [filteredCourses, setFilteredCourses] = useState([]);
@@ -278,7 +279,6 @@ const ItemHome = ({ userId }) => {
             </View>
         );
     }
-
     return (
         <View>
             {filteredCourses.map((course, index) => (
@@ -323,9 +323,9 @@ const ItemHome = ({ userId }) => {
                             <Feather name="bookmark" size={24} color="black" />
                             <Text style={styles.itembottomtextchild}>{courseVocabulary.learnedVocabulary || 0}</Text>
                         </View>
-                        <TouchableOpacity style={styles.itembottombutton}>
-                            <Text style={styles.itembottombuttontext}>Ôn tập thông thường</Text>
-                        </TouchableOpacity>
+                        {/* <TouchableOpacity style={styles.itembottombutton} onPress={() => {navigation.navigate("ReviewCourseScreen")}}>
+                            <Text style={styles.itembottombuttontext}>Xem chi tiết khóa học </Text>
+                        </TouchableOpacity> */}
                         <MaterialIcons 
                             name="dashboard" 
                             size={24} 
