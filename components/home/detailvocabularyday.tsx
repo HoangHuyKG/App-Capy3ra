@@ -37,7 +37,7 @@ const DetailVocabularyDay = () => {
             const totalVocabulary = vocabQuerySnapshot.size;
 
             if (totalVocabulary === 0) {
-                console.warn(`No vocabularies found for lesson ${lessonId}.`);
+              
                 return 0;
             }
 
@@ -138,25 +138,39 @@ const DetailVocabularyDay = () => {
     
     const handleAddUserCourse = async () => {
         try {
+            if (!currentUserId || !lessonId || !courseData?.courseId) {
+                console.warn("Thiếu thông tin cần thiết để lưu khóa học.");
+                return;
+            }
+    
             const userCourseId = `${currentUserId}_${lessonId}`;
+            
+            // Kiểm tra khóa học trong Firestore
             const userCourseQuery = query(
                 collection(db, 'User_Course'),
-                where('course_id', '==', courseData.courseId)
+                where('user_course_id', '==', userCourseId) // So sánh bằng ID duy nhất
             );
             const querySnapshot = await getDocs(userCourseQuery);
-
+    
+            // Nếu chưa tồn tại, thêm bản ghi mới
             if (querySnapshot.empty) {
+                
                 await addDoc(collection(db, 'User_Course'), {
                     user_course_id: userCourseId,
                     user_id: currentUserId,
-                    course_id: lessonData.courseId,
-                    progress: 0 
+                    course_id: courseData.courseId, // Đảm bảo giá trị này đúng
+                    lesson_id: lessonId,
+                    progress: 0, // Mặc định là 0 khi bắt đầu học
+                    createdAt: new Date(), // Thêm timestamp nếu cần
                 });
+            } else {
+                console.log("Khóa học này đã tồn tại trong User_Course.");
             }
         } catch (error) {
-            console.error("Error checking or adding User_Course record: ", error);
+            console.error("Lỗi khi thêm User_Course:", error);
         }
     };
+    
 
     const renderItem = ({ item }) => (
         currentUserId === courseData.idUser ? (

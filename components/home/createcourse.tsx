@@ -7,10 +7,10 @@ import { globalFont } from '../../utils/const';
 import { collection, addDoc, onSnapshot, updateDoc, doc, getDoc } from 'firebase/firestore';
 import { useUser } from './UserContext';
 import { NavigationProp, useNavigation } from '@react-navigation/native';
+import { Image } from 'react-native';
 
 const CreateCourseScreen = () => {
     const { userInfo } = useUser(); // Lấy userInfo từ context
-    const [courseId, setCourseId] = useState('');
     const [createdBy, setCreatedBy] = useState(''); // Sẽ tự động lấy
     const [description, setDescription] = useState('');
     const [language, setLanguage] = useState('');
@@ -30,8 +30,8 @@ const CreateCourseScreen = () => {
                     if (userDoc.exists()) {
                         const userData = userDoc.data();
                         setCreatedBy(userData.name || ''); // Tên người tạo
-                        setImageUser(userData.photo || ''); // Ảnh người tạo
-                        setidUser(user.uid); // ID người dùng
+                        setImageUser(userInfo.data.user.photo || ''); // Ảnh người tạo
+                        setidUser(userInfo.data.user.id); // ID người dùng
                     }
                 }
             } catch (error) {
@@ -39,22 +39,30 @@ const CreateCourseScreen = () => {
             }
         };
 
-        if (!userInfo) {
             fetchUserData(); // Truy vấn Firestore nếu userInfo không tồn tại
-        } else {
-            // Sử dụng dữ liệu từ UserContext
-            setCreatedBy(userInfo.data.user.name || '');
-            setImageUser(userInfo.data.user.photo || '');
-            setidUser(userInfo.data.user.id || '');
-        }
-    }, [userInfo]);
+
+    });
 
     const handleCreateCourse = async () => {
         if (!createdBy || !description || !language || !title || !imageUrl || !imageUser || !idUser) {
+         
             Alert.alert("Lỗi", "Vui lòng điền đầy đủ thông tin");
             return;
         }
-
+        const isValidImageUrl = async (url) => {
+            try {
+                const result = await Image.prefetch(url);
+                return result; // `true` nếu URL hợp lệ
+            } catch (error) {
+                return false; // `false` nếu URL không hợp lệ
+            }
+        };
+        
+        const isImageValid = await isValidImageUrl(imageUrl);
+if (!isImageValid) {
+            Alert.alert("Lỗi", "URL hình ảnh không hợp lệ, vui lòng kiểm tra lại");
+            return;
+        }
         try {
             const docRef = await addDoc(collection(db, 'Courses'), {
                 created_by: createdBy,
@@ -82,14 +90,16 @@ const CreateCourseScreen = () => {
             console.error(error);
         }
     };
-
+    
     return (
         <View style={styles.container}>
             <AppHeader />
             <ScrollView style={styles.containerbox}>
                 <View style={styles.formContainer}>
-                    <Text style={styles.label}>Người tạo</Text>
-                    <Text style={styles.input}>{createdBy || "Đang tải..."}</Text>
+                <Text style={[styles.label, { display: 'none' }]}>Người tạo</Text>
+                <Text style={[styles.input, { display: 'none' }]}>{createdBy || "Đang tải..."}</Text>
+
+
 
                     <Text style={styles.label}>Mô tả</Text>
                     <TextInput
@@ -112,6 +122,7 @@ const CreateCourseScreen = () => {
                             <Picker.Item label="Tiếng Anh" value="English" />
                             <Picker.Item label="Tiếng Tây Ban Nha" value="Spanish" />
                             <Picker.Item label="Tiếng Nhật" value="Japanese" />
+                            <Picker.Item label="Tiếng Pháp" value="French" />
                         </Picker>
                     </View>
 
@@ -122,18 +133,16 @@ const CreateCourseScreen = () => {
                         value={title}
                         onChangeText={setTitle}
                     />
-
-                    <Text style={styles.label}>URL Hình Ảnh</Text>
+<Text style={styles.label}>URL Hình Ảnh</Text>
                     <TextInput
                         style={styles.input}
                         placeholder="Nhập URL hình ảnh của khóa học"
                         value={imageUrl}
                         onChangeText={setImageUrl}
                     />
-
-                    <TouchableOpacity style={styles.button} onPress={handleCreateCourse}>
-                        <Text style={styles.buttonText}>Tạo khóa học</Text>
-                    </TouchableOpacity>
+                        <TouchableOpacity style={styles.button} onPress={handleCreateCourse}>
+                            <Text style={styles.buttonText}>Tạo khóa học</Text>
+                        </TouchableOpacity>
                 </View>
             </ScrollView>
         </View>
@@ -149,8 +158,11 @@ const styles = StyleSheet.create({
     pickerContainer: { justifyContent: 'center', padding: 10, borderWidth: 1, borderRadius: 10, borderColor: '#ddd', marginBottom: 16, backgroundColor: '#fff' },
     picker: { height: 30, width: '100%' },
     textArea: { padding: 15, height: 100, borderColor: '#ddd', borderWidth: 1, borderRadius: 5, marginBottom: 16, backgroundColor: '#fff', textAlignVertical: 'top' },
-    button: { marginTop: 20, backgroundColor: '#02929A', paddingVertical: 12, borderRadius: 5, alignItems: 'center' },
+    button: {  marginTop: 20, backgroundColor: '#02929A', paddingVertical: 12, borderRadius: 5, alignItems: 'center' },
     buttonText: { color: '#fff', fontSize: 18, fontFamily: globalFont },
 });
 
 export default CreateCourseScreen;
+function isValidImageUrl(imageUrl: string) {
+    throw new Error('Function not implemented.');
+}
