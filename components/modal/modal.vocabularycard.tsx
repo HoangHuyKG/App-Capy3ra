@@ -23,42 +23,73 @@ interface Iprops {
 
 const VocabularyCard = (props: Iprops) => {
     const navigation: NavigationProp<any> = useNavigation();
-    const { modalVisible, setModalVisible, vocabularies, currentUserId, lessonId, courseId} = props;
+    const { modalVisible, setModalVisible, vocabularies, currentUserId, lessonId, courseId } = props;
+
     const [currentIndex, setCurrentIndex] = useState(0);
     const [currentScreen, setCurrentScreen] = useState('screen1');
     const [selectedOption, setSelectedOption] = useState('');
     const [correctAnswer, setCorrectAnswer] = useState('');
     const [showCorrectAnswer, setShowCorrectAnswer] = useState(false);
     const [actionTaken, setActionTaken] = useState(false);
-    const [isSelecting, setIsSelecting] = useState(true); // New state variable
-    const totalVocabularies = vocabularies.length; // Tổng số từ vựng có sẵn
-    const [progress, setProgress] = useState(0); // New state for progress
+    const [isSelecting, setIsSelecting] = useState(true);
+    const [progress, setProgress] = useState(0);
+    const [totalScore, setTotalScore] = useState(0);
 
-    const [totalScore, setTotalScore] = useState(0); // New state for total score
+    const [filteredVocabularies, setFilteredVocabularies] = useState<Vocabulary[]>([]);
+
+    // Fetch unlearned vocabularies
+    const fetchUnlearnedVocabularies = async () => {
+        const unlearnedVocabularies: Vocabulary[] = [];
+        try {
+            const progressQuerySnapshot = await getDocs(
+                query(
+                    collection(db, 'User_Progress'),
+                    where('user_id', '==', currentUserId),
+                    where('lesson_id', '==', lessonId),
+                    where('status', '==', 'đã học')
+                )
+            );
+            const learnedWordIds = progressQuerySnapshot.docs.map(doc => doc.data().vocab_id);
+    
+            vocabularies.forEach(vocab => {
+                if (!learnedWordIds.includes(vocab.wordId)) {
+                    unlearnedVocabularies.push(vocab);
+                }
+            });
+    
+            setFilteredVocabularies(unlearnedVocabularies);
+        } catch (error) {
+            console.error("Error fetching unlearned vocabularies: ", error);
+        }
+    };
+    
+    // Trong useEffect, chỉ cần gọi hàm
+    useEffect(() => {
+        fetchUnlearnedVocabularies();
+    }, [vocabularies, currentUserId, lessonId]);
+
     useEffect(() => {
         setSelectedOption('');
         setShowCorrectAnswer(false);
         setActionTaken(false);
         setIsSelecting(true);
-        setCorrectAnswer(vocabularies[currentIndex]?.englishWord || '');
-       
-    }, [currentScreen, currentIndex, vocabularies]);
+        setCorrectAnswer(filteredVocabularies[currentIndex]?.englishWord || '');
+    }, [currentScreen, currentIndex, filteredVocabularies]);
 
     const getRandomOptions = () => {
-        if (vocabularies.length === 0) return []; // Return empty array if vocabularies are empty
-        const currentVocabulary = vocabularies[currentIndex];
+        if (filteredVocabularies.length === 0) return [];
+        const currentVocabulary = filteredVocabularies[currentIndex];
         const optionsSet = new Set<string>([currentVocabulary.englishWord]);
 
-        while (optionsSet.size < Math.min(4, vocabularies.length)) {
-            const randomIndex = Math.floor(Math.random() * vocabularies.length);
-            optionsSet.add(vocabularies[randomIndex].englishWord);
+        while (optionsSet.size < Math.min(4, filteredVocabularies.length)) {
+            const randomIndex = Math.floor(Math.random() * filteredVocabularies.length);
+            optionsSet.add(filteredVocabularies[randomIndex].englishWord);
         }
 
         return Array.from(optionsSet);
     };
 
-    const options = useMemo(() => getRandomOptions(), [currentIndex, vocabularies]); // Use vocabularies as dependency
-
+    const options = useMemo(() => getRandomOptions(), [currentIndex, filteredVocabularies]);
 
     const handleOptionSelect = (option: string) => {
         if (!isSelecting) return;
@@ -68,20 +99,10 @@ const VocabularyCard = (props: Iprops) => {
         setIsSelecting(false);
 
         if (option === correctAnswer) {
-            setTotalScore((prevScore) => prevScore + 1000); // Increment score by 1000
-            if (currentScreen === 'screen3') {
-                setTimeout(() => {
-                    handleNextVocabulary();
-                }, 500);
-            } else {
-                setTimeout(() => {
-                    setCurrentScreen('screen3');
-                    setIsSelecting(true);
-                    setSelectedOption('');
-                }, 500);
-            }
-        } else {
-            // Handle wrong answer case if needed
+            setTotalScore((prevScore) => prevScore + 1000);
+            setTimeout(() => {
+                handleNextVocabulary();
+            }, 500);
         }
     };
 
@@ -91,23 +112,43 @@ const VocabularyCard = (props: Iprops) => {
     };
 
     const handleNextVocabulary = () => {
-        handleCompleteLearning(vocabularies[currentIndex].wordId, currentUserId, lessonId);
-        if (currentIndex + 1 === vocabularies.length) {
+        handleCompleteLearning(filteredVocabularies[currentIndex].wordId, currentUserId, lessonId);
+        if (currentIndex + 1 === filteredVocabularies.length) {
             setProgress(100);
             setCurrentScreen('screen4');
         } else {
             const newIndex = currentIndex + 1;
-            setProgress((newIndex / totalVocabularies) * 100);
+            setProgress(((newIndex) / filteredVocabularies.length) * 100);
             setCurrentIndex(newIndex);
             setCurrentScreen('screen1');
             setSelectedOption('');
             setShowCorrectAnswer(false);
             setActionTaken(false);
             setIsSelecting(true);
-            setCorrectAnswer(vocabularies[newIndex]?.englishWord || '');
+            setCorrectAnswer(filteredVocabularies[newIndex]?.englishWord || '');
         }
     };
-    
+
+    const handleCompleteLearning = async (vocabId: string, currentUserId: string, lessonId: string) => {
+        try {
+            const progressId = `${currentUserId}_${lessonId}_${vocabId}`;
+            const progressDocSnapshot = query(
+                collection(db, 'User_Progress'),
+                where('progress_id', '==', progressId)
+            );
+            const querySnapshot = await getDocs(progressDocSnapshot);
+
+            if (!querySnapshot.empty) {
+                const docId = querySnapshot.docs[0].id;
+                const progressDocRef = doc(db, 'User_Progress', docId);
+                await updateDoc(progressDocRef, {
+                    status: 'đã học',
+                });
+            }
+        } catch (error) {
+            console.error("Error updating User_Progress: ", error);
+        }
+    };
     const handleStartLearning = async (vocabId, currentUserId, lessonId) => {
         if (!currentUserId || !lessonId || !vocabId) {
             console.log(currentUserId)
@@ -139,72 +180,7 @@ const VocabularyCard = (props: Iprops) => {
     };
     
 
-    const handleCompleteLearning = async (vocabId, currentUserId, lessonId) => {
-            try {
-                const progress_id = `${currentUserId}_${lessonId}_${vocabId}`;
-                
-                // Query để tìm tài liệu dựa trên progress_id
-                const progressDocSnapshot = query(
-                    collection(db, 'User_Progress'),
-                    where('progress_id', '==', progress_id)
-                );
-                const querySnapshot = await getDocs(progressDocSnapshot);
-        
-                if (!querySnapshot.empty) {
-                    // Lấy ID của tài liệu đầu tiên trong kết quả query
-                    const docId = querySnapshot.docs[0].id;
-        
-                    // Thực hiện cập nhật status
-                    const progressDocRef = doc(db, 'User_Progress', docId);
-                    await updateDoc(progressDocRef, {
-                        status: 'đã học',
-                    });
-                    updateCourseProgress(currentUserId, courseId);
-
-                } else {
-                    console.log("User_Progress record does not exist!");
-                }
-            } catch (error) {
-                console.error("Error updating User_Progress record: ", error);
-            }
-        };
-        const calculateLearningProgress = async (currentUserId: string, lessonId: string): Promise<number> => {
-            try {
-                // 1. Get total vocabulary count for the lesson
-                const vocabQuerySnapshot = await getDocs(
-                    query(collection(db, 'Vocabularies'), where('lessonId', '==', lessonId))
-                );
-                const totalVocabulary = vocabQuerySnapshot.size;
-        
-                // Check if there are no vocabularies for the lesson
-                if (totalVocabulary === 0) {
-                    console.warn(`No vocabularies found for lesson ${lessonId}.`);
-                    return 0;  // Return 0 if there are no vocabularies
-                }
-        
-                // 2. Get the count of vocabularies the user has learned for this lesson
-                const progressQuerySnapshot = await getDocs(
-                    query(
-                        collection(db, 'User_Progress'),
-                        where('user_id', '==', currentUserId),
-                        where('lesson_id', '==', lessonId),
-                        where('status', 'in', ['đã học']) // Learning statuses
-                    )
-                );
-                const learnedVocabulary = (progressQuerySnapshot.size)+1;
-        
-                // 3. Calculate progress as a percentage (as a number)
-                const progressPercentage = (learnedVocabulary / totalVocabulary) * 100;
-                
-                console.log(`Learning progress for lesson ${lessonId}: ${progressPercentage.toFixed(2)}%`);
-                return progressPercentage;  // Return the number
-            } catch (error) {
-                console.error("Error calculating learning progress: ", error);
-                return 0;  // Return 0 as a number in case of an error
-            }
-        };
-        
-        
+    
 
         
         const updateCourseProgress = async (currentUserId, courseId) => {
@@ -279,7 +255,8 @@ const VocabularyCard = (props: Iprops) => {
 
 
     const renderScreen = () => {
-        const currentVocabulary = vocabularies[currentIndex];
+        const currentVocabulary = filteredVocabularies[currentIndex];
+
         if (!currentVocabulary) {
             return <Text>No vocabulary to display.</Text>;
         }
@@ -332,7 +309,7 @@ const VocabularyCard = (props: Iprops) => {
                                 <TouchableOpacity style={styles.soundButtonb}>
                                     <AntDesign name="sound" size={40} color="black" />
                                 </TouchableOpacity>
-                                <Text style={styles.label}>TRẠNG TỪ</Text>
+                                <Text style={styles.label}>{currentVocabulary.wordType}</Text>
                             </View>
 
                             <View style={styles.optionsContainer}>
@@ -443,6 +420,7 @@ const VocabularyCard = (props: Iprops) => {
                 setTotalScore(0); // Đặt lại trạng thái chọn
                 setProgress(0);
                 updateCourseProgress(currentUserId, courseId);
+                fetchUnlearnedVocabularies();
 
             }}
         >
@@ -461,6 +439,8 @@ const VocabularyCard = (props: Iprops) => {
                         setTotalScore(0); // Đặt lại trạng thái chọn
                         setProgress(0)
                         updateCourseProgress(currentUserId, courseId);
+                        fetchUnlearnedVocabularies();
+
                     }}>
                         <AntDesign name="closecircle" size={30} color="white" />
                     </TouchableOpacity>
