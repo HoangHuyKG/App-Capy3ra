@@ -128,6 +128,7 @@ const CreateCourseScreen = () => {
                             <Picker.Item label="Tiếng Anh" value="English" />
                             <Picker.Item label="Tiếng Tây Ban Nha" value="Spanish" />
                             <Picker.Item label="Tiếng Nhật" value="Japanese" />
+                            <Picker.Item label="Tiếng Pháp" value="French" />
                         </Picker>
                     </View>
 
