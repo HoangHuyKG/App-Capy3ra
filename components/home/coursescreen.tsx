@@ -6,6 +6,8 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import CourseItem from "./itemcourse";
 import { globalFont } from "../../utils/const";
 import { NavigationProp, useNavigation } from "@react-navigation/native";
+import { useState } from "react";
+import CourseSearch from "./itemsearch";
 
 const styles = StyleSheet.create({
     container: {
@@ -139,35 +141,39 @@ const styles = StyleSheet.create({
 })
 const CourseScreen = () => {
     const navigation: NavigationProp<any> = useNavigation();
+    const [searchQuery, setSearchQuery] = useState(""); // Từ khóa tìm kiếm
+
+    const isSearching = searchQuery.trim().length > 0; // Xác định trạng thái tìm kiếm dựa trên từ khóa
 
     return (
         <View style={styles.container}>
             <AppHeader />
             <View style={styles.boxbutton}>
-                <TouchableOpacity style={styles.button} onPress={()=> navigation.navigate("CreateCourseScreen")}>
+                <TouchableOpacity style={styles.button} onPress={() => navigation.navigate("CreateCourseScreen")}>
                     <Text style={styles.buttonText}>Tạo khóa học</Text>
                 </TouchableOpacity>
             </View>
 
-            <View style={styles.container}>
-
-                <View style={styles.searchContainer}>
-                    <TextInput
-                        style={styles.searchInput}
-                        placeholder="Tìm kiếm..."
-                        placeholderTextColor="#999"
-                    />
-                    <Ionicons name="search" size={24} color="black" style={styles.searchIcon} />
-                </View>
-
-                <ScrollView style={styles.courseList}>
-          
-                        <CourseItem />
-             
-                </ScrollView>
+            <View style={styles.searchContainer}>
+                <TextInput
+                    style={styles.searchInput}
+                    placeholder="Tìm kiếm..."
+                    placeholderTextColor="#999"
+                    value={searchQuery}
+                    onChangeText={setSearchQuery} // Cập nhật từ khóa tìm kiếm
+                />
+                <Ionicons name="search" size={24} style={{ marginLeft: 10, color: '#333' }} />
             </View>
+
+            <ScrollView style={styles.courseList}>
+                {isSearching ? (
+                    <CourseSearch searchQuery={searchQuery} /> // Tìm kiếm dựa trên từ khóa
+                ) : (
+                    <CourseItem /> // Hiển thị tất cả khóa học
+                )}
+            </ScrollView>
         </View>
-    )
-}
+    );
+};
 
 export default CourseScreen;

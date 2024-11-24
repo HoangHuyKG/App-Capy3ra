@@ -58,6 +58,8 @@ const ReviewCourseScreen = () => {
             </View>
         );
     }
+
+
     return (
         <View style={styles.container}>
             <AppHeader />
@@ -159,7 +161,8 @@ const styles = StyleSheet.create({
     boxbutton: {
         display: 'flex',
         flexDirection: 'row',
-        justifyContent: 'space-between'
+        justifyContent: 'space-between',
+        marginLeft: 10
     },
     subHeaderText: {
         color: '#fff',

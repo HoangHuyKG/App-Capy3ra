@@ -1,19 +1,22 @@
-import { StyleSheet, Text, View, Image, TouchableOpacity } from "react-native";
+import React, { useCallback, useEffect, useState } from "react";
+import {
+    StyleSheet,
+    Text,
+    View,
+    Image,
+    TouchableOpacity,
+    ScrollView,
+    RefreshControl,
+} from "react-native";
 import Entypo from '@expo/vector-icons/Entypo';
-import { ImagesAssets } from "../../assets/images/ImagesAssets";
-import { globalFont } from "../../utils/const";
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
-import AntDesign from '@expo/vector-icons/AntDesign';
-import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import ModalMenu from "../modal/modal.menu";
-import React, { useEffect, useState } from "react";
-import ModalDashBoard from "../modal/modal.dashboard";
-import { db } from '../../fireBaseConfig';
-import { collection, query, where, onSnapshot, getDocs } from 'firebase/firestore';
-import ModalLearnOrTeach from "../modal/modal.learnorteach";
-import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { NavigationProp, useNavigation } from "@react-navigation/native";
 import Feather from '@expo/vector-icons/Feather';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import { collection, query, where, onSnapshot, getDocs } from 'firebase/firestore';
+import { db } from '../../fireBaseConfig';
+import { NavigationProp, useNavigation } from "@react-navigation/native";
+import ModalMenu from "../modal/modal.menu";
+import ModalDashBoard from "../modal/modal.dashboard";
+import { globalFont } from "../../utils/const";
 
 const styles = StyleSheet.create({
     container: {
@@ -172,102 +175,132 @@ const ItemHome = ({ userId }) => {
     const [courses, setCourses] = useState([]);
     const [userCourses, setUserCourses] = useState([]);
     const [filteredCourses, setFilteredCourses] = useState([]);
+    const [courseVocabularyMap, setCourseVocabularyMap] = useState({});
     const [modalVisible, setModalVisible] = useState(false);
     const [modalVisible2, setModalVisible2] = useState(false);
     const [selectedCourseId, setSelectedCourseId] = useState(null);
-    const [courseVocabulary, setCourseVocabulary] = useState({ totalVocabulary: 0, learnedVocabulary: 0 });
-
-    const fetchVocabularyData = (courseId, currentUserId) => {
-        const lessonsRef = query(collection(db, 'Lessons'), where('courseId', '==', courseId));
-    
-        onSnapshot(lessonsRef, (lessonsSnapshot) => {
-            let totalVocabularyCount = 0;
-            let learnedVocabularyCount = 0;
-    
-            const lessonPromises = lessonsSnapshot.docs.map(async (lessonDoc) => {
-                const lessonId = lessonDoc.id;
-    
-                // Vocabulary count for each lesson
-                const vocabSnapshot = await getDocs(query(collection(db, 'Vocabularies'), where('lessonId', '==', lessonId)));
-                totalVocabularyCount += vocabSnapshot.size;
-    
-                // Learned vocabulary count for each lesson
-                const learnedSnapshot = await getDocs(
-                    query(
-                        collection(db, 'User_Progress'),
-                        where('user_id', '==', currentUserId),
-                        where('lesson_id', '==', lessonId),
-                        where('status', 'in', ['đã học'])
-                    )
-                );
-                learnedVocabularyCount += learnedSnapshot.size;
-            });
-    
-            // Wait for lesson promises to complete
-            Promise.all(lessonPromises).then(() => {
-                setCourseVocabulary({
-                    totalVocabulary: totalVocabularyCount,
-                    learnedVocabulary: learnedVocabularyCount,
-                });
-            });
-        });
-    };
-
-    useEffect(() => {
-        const userCourseUnsubscribe = onSnapshot(
-            collection(db, 'User_Course'),
-            (snapshot) => {
-                const userCourseData = snapshot.docs.map(doc => ({
-                    ...doc.data(),
-                    id: doc.id,
-                }));
-                setUserCourses(userCourseData);
-            }
-        );
-    
-        const coursesUnsubscribe = onSnapshot(
-            collection(db, 'Courses'),
-            (snapshot) => {
-                const courseData = snapshot.docs.map(doc => ({
-                    ...doc.data(),
-                    id: doc.id,
-                }));
-                setCourses(courseData);
-            }
-        );
-    
-        // Real-time listener on User_Progress
-        const unsubscribeProgress = onSnapshot(
-            collection(db, 'User_Progress'),
-            () => {
-                if (filteredCourses.length > 0) {
-                    fetchVocabularyData(filteredCourses[0].id, userId);  // Fetch and update vocabulary in real-time
-                }
-            }
-        );
-    
-        return () => {
-            userCourseUnsubscribe();
-            coursesUnsubscribe();
-            unsubscribeProgress();
-        };
-    }, [filteredCourses, userId]);
-
-    useEffect(() => {
-        const matchedCourses = userCourses
-            .filter(userCourse => userCourse.user_id === userId)
-            .map(userCourse => {
-                const course = courses.find(c => c.courseId === userCourse.course_id);
-                return course ? { ...course, progress: userCourse.progress } : null;
+    const [refreshing, setRefreshing] = useState(false);
+  
+    const fetchCourses = useCallback(async () => {
+      const coursesRef = collection(db, "Courses");
+      const userCoursesRef = query(
+        collection(db, "User_Course"),
+        where("user_id", "==", userId)
+      );
+  
+      try {
+        const [coursesSnapshot, userCoursesSnapshot] = await Promise.all([
+          getDocs(coursesRef),
+          getDocs(userCoursesRef),
+        ]);
+  
+        const allCourses = coursesSnapshot.docs.map((doc) => ({
+          ...doc.data(),
+          id: doc.id,
+        }));
+        const userCourses = userCoursesSnapshot.docs.map((doc) => ({
+          ...doc.data(),
+          id: doc.id,
+        }));
+  
+        setCourses(allCourses);
+        setUserCourses(userCourses);
+      } catch (error) {
+        console.error("Error fetching courses:", error);
+      }
+    }, [userId]);
+  
+    const calculateVocabulary = useCallback(async (courses) => {
+      const vocabularyMap = {};
+  
+      await Promise.all(
+        courses.map(async (course) => {
+          const lessonsRef = query(
+            collection(db, "Lessons"),
+            where("courseId", "==", course.id)
+          );
+  
+          const lessonsSnapshot = await getDocs(lessonsRef);
+          let totalVocabulary = 0;
+          let learnedVocabulary = 0;
+  
+          await Promise.all(
+            lessonsSnapshot.docs.map(async (lessonDoc) => {
+              const lessonId = lessonDoc.id;
+  
+              // Count total vocabularies
+              const vocabSnapshot = await getDocs(
+                query(collection(db, "Vocabularies"), where("lessonId", "==", lessonId))
+              );
+              totalVocabulary += vocabSnapshot.size;
+  
+              // Count learned vocabularies
+              const learnedSnapshot = await getDocs(
+                query(
+                  collection(db, "User_Progress"),
+                  where("user_id", "==", userId),
+                  where("lesson_id", "==", lessonId),
+                  where("status", "in", ["đã học"])
+                )
+              );
+              learnedVocabulary += learnedSnapshot.size;
             })
-            .filter(course => course !== null);
-
-        setFilteredCourses(matchedCourses);
-    }, [userCourses, courses, userId]);
+          );
+  
+          vocabularyMap[course.id] = {
+            totalVocabulary,
+            learnedVocabulary,
+          };
+        })
+      );
+  
+      setCourseVocabularyMap(vocabularyMap);
+    }, [userId]);
+  
+    const filterUserCourses = useCallback(() => {
+      const matchedCourses = userCourses
+        .map((userCourse) => {
+          const course = courses.find((c) => c.courseId === userCourse.course_id);
+          return course ? { ...course, progress: userCourse.progress } : null;
+        })
+        .filter(Boolean);
+  
+      setFilteredCourses(matchedCourses);
+    }, [userCourses, courses]);
+  
+    const onRefresh = useCallback(async () => {
+      setRefreshing(true);
+      await fetchCourses();
+      setRefreshing(false);
+    }, [fetchCourses]);
+  
+    useEffect(() => {
+      const unsubscribe = fetchCourses();
+      return () => unsubscribe;
+    }, [fetchCourses]);
+  
+    useEffect(() => {
+      filterUserCourses();
+    }, [userCourses, courses, filterUserCourses]);
+  
+    useEffect(() => {
+      if (filteredCourses.length > 0) calculateVocabulary(filteredCourses);
+    }, [filteredCourses, calculateVocabulary]);
 
     if (filteredCourses.length === 0) {
         return (
+            
+            <ScrollView
+        refreshControl={
+            <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                colors={["#02929A"]} // Màu sắc của spinner khi làm mới
+            />
+        }
+    >
             <View style={styles.box}>
+
                 <Text style={styles.title}>Ở đây chưa có khóa học nào!</Text>
                 <Text style={styles.description}>
                     Bạn vẫn chưa tạo ra tham gia khóa học nào. Để tạo tham gia một khóa học, hãy nhấn vào nút bên dưới.
@@ -275,83 +308,89 @@ const ItemHome = ({ userId }) => {
                 <TouchableOpacity style={styles.button} onPress={() => navigation.navigate("CourseScreen")}>
                     <Text style={styles.buttonText}>Tham gia khóa học</Text>
                 </TouchableOpacity>
-            </View>
+        </View>
+
+                </ScrollView>
         );
     }
 
     return (
-        <View>
-            {filteredCourses.map((course, index) => (
-                <View key={index} style={styles.container}>
-                    <View style={styles.itemtop}>
-                        <Image
-                            style={styles.imageuser}
-                            source={{ uri: course.imageUrl || 'https://via.placeholder.com/150' }}
-                        />
-                        <Text style={styles.itemtoptext}>{course.title || 'N/A'}</Text>
-                        <Entypo 
-                            name="dots-three-vertical" 
-                            size={24} 
-                            color="black" 
-                            onPress={() => {
-                                setSelectedCourseId(course.id); // Lưu courseId trước khi mở modal
-                                setModalVisible(true);
-                            }}
-                        />
-                    </View>
-                    <View style={styles.itemcenter}>
-                    <Text style={styles.itemcentertext}>
-                        {course.progress || '0'}% 
-                    </Text>
-                    <Text style={styles.itemcentertext}>
-                        {courseVocabulary.learnedVocabulary}/{courseVocabulary.totalVocabulary} mục đã học
-                    </Text>
-                    </View>
-                    <View style={styles.progressBarContainer}>
-                        <View style={styles.progressBar}>
-                        <View 
-                            style={[styles.progress, { width: `${course.progress || 0}%` }]} // Cập nhật chiều rộng theo course.progress
-                        />
+        <ScrollView
+        refreshControl={
+            <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                colors={["#02929A"]} // Màu sắc của spinner khi làm mới
+            />
+        }
+    >
+            {filteredCourses.map((course, index) => {
+                const vocabulary = courseVocabularyMap[course.id] || { totalVocabulary: 0, learnedVocabulary: 0 };
+                return (
+                    <View key={index} style={styles.container}>
+                        <View style={styles.itemtop}>
+                            <Image
+                                style={styles.imageuser}
+                                source={{ uri: course.imageUrl || 'https://via.placeholder.com/150' }}
+                            />
+                            <Text style={styles.itemtoptext}>{course.title || 'N/A'}</Text>
+                            <Entypo
+                                name="dots-three-vertical"
+                                size={24}
+                                color="black"
+                                onPress={() => {
+                                    setSelectedCourseId(course.id); // Lưu courseId trước khi mở modal
+                                    setModalVisible(true);
+                                }}
+                            />
+                        </View>
+                        <View style={styles.itemcenter}>
+                            <Text style={styles.itemcentertext}>{course.progress || '0'}%</Text>
+                            <Text style={styles.itemcentertext}>
+                                {vocabulary.learnedVocabulary}/{vocabulary.totalVocabulary} mục đã học
+                            </Text>
+                        </View>
+                        <View style={styles.progressBarContainer}>
+                            <View style={styles.progressBar}>
+                                <View
+                                    style={[styles.progress, { width: `${course.progress || 0}%` }]} // Cập nhật chiều rộng theo course.progress
+                                />
+                            </View>
+                        </View>
+                        <View style={styles.itembottom}>
+                            <View style={styles.itembottomchild}>
+                                <Feather name="book" size={24} color="black" />
+                                <Text style={styles.itembottomtextchild}>{vocabulary.totalVocabulary}</Text>
+                            </View>
+                            <View style={styles.itembottomchild}>
+                                <Feather name="bookmark" size={24} color="black" />
+                                <Text style={styles.itembottomtextchild}>{vocabulary.learnedVocabulary}</Text>
+                            </View>
+                            <MaterialIcons
+                                name="dashboard"
+                                size={24}
+                                color="black"
+                                onPress={() => {
+                                    setSelectedCourseId(course.id);
+                                    setModalVisible2(true);
+                                }}
+                            />
                         </View>
                     </View>
-                    <View style={styles.itembottom}>
-                        <View style={styles.itembottomchild}>
-                            <Feather name="book" size={24} color="black" />
-                            <Text style={styles.itembottomtextchild}>{courseVocabulary.totalVocabulary || 0}</Text>
-                        </View>
-                        <View style={styles.itembottomchild}>
-                            <Feather name="bookmark" size={24} color="black" />
-                            <Text style={styles.itembottomtextchild}>{courseVocabulary.learnedVocabulary || 0}</Text>
-                        </View>
-                        <TouchableOpacity style={styles.itembottombutton}>
-                            <Text style={styles.itembottombuttontext}>Ôn tập thông thường</Text>
-                        </TouchableOpacity>
-                        <MaterialIcons 
-                            name="dashboard" 
-                            size={24} 
-                            color="black" 
-                            onPress={() => {
-                                setSelectedCourseId(course.id); // Lưu courseId trước khi mở modal dashboard
-                                setModalVisible2(true);
-                            }}
-                        />
-                    </View>
-                </View>
-            ))}
-            <ModalMenu 
+                );
+            })}
+            <ModalMenu
                 modalVisible={modalVisible}
                 setModalVisible={setModalVisible}
                 courseId={selectedCourseId}
-                userId={userId}   // Truyền courseId vào modal
+                userId={userId}
             />
-            <ModalDashBoard 
+            <ModalDashBoard
                 modalVisible={modalVisible2}
                 setModalVisible={setModalVisible2}
-      
             />
-        </View>
+         </ScrollView>
     );
 };
-
 
 export default ItemHome;

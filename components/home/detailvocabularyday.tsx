@@ -37,7 +37,7 @@ const DetailVocabularyDay = () => {
             const totalVocabulary = vocabQuerySnapshot.size;
 
             if (totalVocabulary === 0) {
-              
+
                 return 0;
             }
 
@@ -51,14 +51,14 @@ const DetailVocabularyDay = () => {
             );
             const learnedVocabulary = progressQuerySnapshot.size;
             const progressPercentage = (learnedVocabulary / totalVocabulary) * 100;
-            
+
             return progressPercentage;
         } catch (error) {
             console.error("Error calculating learning progress: ", error);
             return 0;
         }
     };
-   
+
     useEffect(() => {
         // Fetch Lesson Data in Real-Time
         const fetchLessonData = () => {
@@ -73,16 +73,16 @@ const DetailVocabularyDay = () => {
                 }, (error) => {
                     console.error("Error fetching lesson data: ", error);
                 });
-    
+
                 return unsubscribeLesson;
             }
         };
-    
+
         // Fetch Vocabulary Data in Real-Time
         const fetchVocabularyData = () => {
             const vocabCollection = collection(db, 'Vocabularies');
             const vocabQuery = query(vocabCollection, where('lessonId', '==', lessonId));
-        
+
             const unsubscribeVocab = onSnapshot(vocabQuery, async (snapshot) => {
                 const vocabList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 setVocabularies(vocabList);
@@ -92,10 +92,10 @@ const DetailVocabularyDay = () => {
             }, (error) => {
                 console.error("Error fetching vocabulary data: ", error);
             });
-        
+
             return unsubscribeVocab;
         };
-    
+
         // Real-Time Progress Update
         const updateProgressRealTime = () => {
             const progressQuery = query(
@@ -110,15 +110,15 @@ const DetailVocabularyDay = () => {
             });
             return unsubscribeProgress;
         };
-    
+
         setLoading(true); // Set loading state to true initially
         const unsubscribeLesson = fetchLessonData();
         const unsubscribeVocab = fetchVocabularyData();
         const unsubscribeProgress = updateProgressRealTime();
-    
+
         // Update loading state once data is fetched
         const timeoutId = setTimeout(() => setLoading(false), 500); // Set a small delay to handle async updates
-    
+
         return () => {
             clearTimeout(timeoutId);
             unsubscribeLesson();
@@ -126,7 +126,7 @@ const DetailVocabularyDay = () => {
             unsubscribeProgress();
         };
     }, [lessonId, currentUserId]);
-    
+
 
     if (loading) {
         return <Text>Loading...</Text>;
@@ -135,26 +135,26 @@ const DetailVocabularyDay = () => {
     if (!lessonData) {
         return <Text>Không tìm thấy dữ liệu bài học.</Text>;
     }
-    
+
     const handleAddUserCourse = async () => {
         try {
             if (!currentUserId || !lessonId || !courseData?.courseId) {
                 console.warn("Thiếu thông tin cần thiết để lưu khóa học.");
                 return;
             }
-    
-            const userCourseId = `${currentUserId}_${lessonId}`;
-            
+
+            const userCourseId = `${currentUserId}_${courseData.courseId}`;
+
             // Kiểm tra khóa học trong Firestore
             const userCourseQuery = query(
                 collection(db, 'User_Course'),
-                where('user_course_id', '==', userCourseId) // So sánh bằng ID duy nhất
+                where('user_course_id', '==',  userCourseId) // So sánh bằng ID duy nhất
             );
             const querySnapshot = await getDocs(userCourseQuery);
-    
+
             // Nếu chưa tồn tại, thêm bản ghi mới
             if (querySnapshot.empty) {
-                
+
                 await addDoc(collection(db, 'User_Course'), {
                     user_course_id: userCourseId,
                     user_id: currentUserId,
@@ -170,7 +170,7 @@ const DetailVocabularyDay = () => {
             console.error("Lỗi khi thêm User_Course:", error);
         }
     };
-    
+
 
     const renderItem = ({ item }) => (
         currentUserId === courseData.idUser ? (
@@ -213,20 +213,20 @@ const DetailVocabularyDay = () => {
             <View style={styles.containerbox}>
                 <View style={styles.header}>
                     {currentUserId === courseData.idUser ? (
-                    <View style={styles.creator}>
-                        <TouchableOpacity style={styles.buttonstudya} onPress={() => setModalVisibleeditlesson(true)}>
-                            <View style={styles.buttonboxx}>
-                                <AntDesign name="edit" size={24} color="white" />
-                                <Text style={styles.textbutton}>Chỉnh sửa</Text>
-                            </View>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={styles.buttonstudya} onPress={() => setModalVisible(true)}>
-                            <View style={styles.buttonboxx}>
-                                <AntDesign name="pluscircleo" size={20} color="white" />
-                                <Text style={styles.textbutton}>Thêm từ vựng</Text>
-                            </View>
-                        </TouchableOpacity>
-                    </View>
+                        <View style={styles.creator}>
+                            <TouchableOpacity style={styles.buttonstudya} onPress={() => setModalVisibleeditlesson(true)}>
+                                <View style={styles.buttonboxx}>
+                                    <AntDesign name="edit" size={24} color="white" />
+                                    <Text style={styles.textbutton}>Chỉnh sửa</Text>
+                                </View>
+                            </TouchableOpacity>
+                            <TouchableOpacity style={styles.buttonstudya} onPress={() => setModalVisible(true)}>
+                                <View style={styles.buttonboxx}>
+                                    <AntDesign name="pluscircleo" size={20} color="white" />
+                                    <Text style={styles.textbutton}>Thêm từ vựng</Text>
+                                </View>
+                            </TouchableOpacity>
+                        </View>
                     ) : (
                         <View></View>
                     )}
@@ -238,13 +238,13 @@ const DetailVocabularyDay = () => {
                     <Text style={styles.dayText}>{lessonData.title}</Text>
                     <View style={styles.progressBarContainer}>
                         <View style={styles.progressBar}>
-                        <View style={[styles.progress, { width: `${progressPercentage}%` }]} />
+                            <View style={[styles.progress, { width: `${progressPercentage}%` }]} />
                         </View>
                     </View>
                     <TouchableOpacity style={styles.buttonstudy} onPress={() => {
-                            handleAddUserCourse();
-                            setModalVisiblelearn(true);
-                        }}>
+                        handleAddUserCourse();
+                        setModalVisiblelearn(true);
+                    }}>
                         <Text style={styles.reviewText}>Học</Text>
                     </TouchableOpacity>
                 </View>
@@ -271,7 +271,7 @@ const DetailVocabularyDay = () => {
             </View>
 
             <AddVocabularyModal modalVisible={modalVisible} setModalVisible={setModalVisible} lessonId={lessonId} />
-            <VocabularyCard modalVisible={modalVisiblelearn} setModalVisible={setModalVisiblelearn} vocabularies={vocabularies} currentUserId={currentUserId} lessonId={lessonId} courseId={courseData.courseId}/>
+            <VocabularyCard modalVisible={modalVisiblelearn} setModalVisible={setModalVisiblelearn} vocabularies={vocabularies} currentUserId={currentUserId} lessonId={lessonId} courseId={courseData.courseId} />
             <EditVocabularyModal modalVisible={modalVisibleedit} setModalVisible={setModalVisibleedit} vocabId={vocabId} />
             <EditLessonModal modalVisible={modalVisibleeditlesson} setModalVisible={setModalVisibleeditlesson} lessonId={lessonId} />
         </View>

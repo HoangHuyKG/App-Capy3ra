@@ -148,7 +148,7 @@ const ModalMenu = ({ modalVisible, setModalVisible, courseId, userId }: Iprops) 
             <Text style={styles.modalText}>Chi tiết khóa học</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity
+          {/* <TouchableOpacity
             style={styles.modalItem2}
             onPress={() => {
               setModalVisible(false);
@@ -156,7 +156,7 @@ const ModalMenu = ({ modalVisible, setModalVisible, courseId, userId }: Iprops) 
             }}
           >
             <Text style={styles.modalText}>Bảng xếp hạng</Text>
-          </TouchableOpacity>
+          </TouchableOpacity> */}
 
           {/* Red Text Option */}
           <TouchableOpacity style={styles.modalItem} onPress={leaveCourse}>

@@ -11,6 +11,7 @@ import { NavigationProp, useNavigation, useRoute } from "@react-navigation/nativ
 import { useUser } from "./UserContext";
 import { auth, db } from '../../fireBaseConfig'; // Đảm bảo đường dẫn này đúng
 import { doc, getDoc, onSnapshot } from "firebase/firestore";
+import { GoogleSignin } from "@react-native-google-signin/google-signin";
 
 const styles = StyleSheet.create({
     container: {
@@ -78,39 +79,39 @@ const SettingScreen = () => {
     const { setUserInfo } = useUser();
     const toggleNotifications = () => setNotificationsEnabled(previousState => !previousState);
   
-    const toggleTheme = () => setTheme(theme === 'Sáng' ? 'Tối' : 'Sáng');
     const handleLogout = async () => {
         try {
           await auth.signOut(); // Đăng xuất từ Firebase
-          setUserInfo(null); // Xoá thông tin người dùng trong context
+          await GoogleSignin.signOut();
           navigation.navigate("StartedLoginScreen");
         } catch (error) {
           console.error("Sign-out error: ", error);
         }
       };
-      const handleLogin = () => {
-        navigation.navigate("StartedLoginScreen"); // Điều hướng đến màn hình đăng nhập
-    };
+     
     const [name, setName] = useState('');
   
 
     useEffect(() => {
-        const user = auth.currentUser; // Lấy thông tin người dùng hiện tại
-        if (!user) return;
-
-        const userDocRef = doc(db, 'Users', user.uid); // Tham chiếu tài liệu của người dùng
+        const user = auth.currentUser; 
+        if (!user) {
+            console.log("No authenticated user found.");
+            return;
+        }
+    
+        const userDocRef = doc(db, 'Users', user.uid);
         const unsubscribe = onSnapshot(userDocRef, (doc) => {
             if (doc.exists()) {
                 const userData = doc.data();
                 setName(userData.name || 'Tên chưa được cập nhật');
-             
             } else {
                 console.log("Không tìm thấy tài liệu người dùng.");
             }
         });
-
-        return () => unsubscribe(); // Hủy lắng nghe khi component bị unmount
+    
+        return () => unsubscribe(); 
     }, []);
+    
     return (
 
         <ScrollView style={styles.container}>
@@ -145,7 +146,7 @@ const SettingScreen = () => {
 
 
 
-                <TouchableOpacity style={styles.option} onPress={userInfo ? handleLogout : handleLogin}>
+                <TouchableOpacity style={styles.option} onPress={handleLogout}>
                     <Text style={styles.optionText}>{userInfo ? "Đăng xuất" : "Đăng nhập"}</Text>
                 </TouchableOpacity>
 

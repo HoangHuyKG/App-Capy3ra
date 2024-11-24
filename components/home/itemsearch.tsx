@@ -3,18 +3,33 @@ import { View, Text, Image, StyleSheet } from 'react-native';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import AntDesign from '@expo/vector-icons/AntDesign';
 import { db } from '../../fireBaseConfig';
-import { collection, onSnapshot } from 'firebase/firestore';
+import { collection, onSnapshot, query, where } from 'firebase/firestore';
 import { TouchableOpacity } from 'react-native-gesture-handler';
 import { NavigationProp, useNavigation } from '@react-navigation/native';
 import { format } from 'date-fns';
 
-const CourseItem = () => {
+interface CourseSearchProps {
+  searchQuery: string; // Từ khóa tìm kiếm được truyền từ component cha
+}
+
+const CourseSearch: React.FC<CourseSearchProps> = ({ searchQuery }) => {
   const [courses, setCourses] = useState([]);
   const navigation: NavigationProp<any> = useNavigation();
 
   useEffect(() => {
-    const unsubscribe = onSnapshot(collection(db, 'Courses'), (snapshot) => {
-      const coursesData = snapshot.docs.map(doc => {
+    if (!searchQuery.trim()) {
+      setCourses([]); // Nếu từ khóa trống, không hiển thị kết quả
+      return;
+    }
+
+    const q = query(
+      collection(db, 'Courses'),
+      where('title', '>=', searchQuery),
+      where('title', '<=', searchQuery + '\uf8ff') // Tìm kiếm chuỗi bắt đầu với từ khóa
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const coursesData = snapshot.docs.map((doc) => {
         const data = doc.data();
         const createdAt = data.createdAt ? data.createdAt.toDate() : null;
         return { id: doc.id, ...data, createdAt };
@@ -23,12 +38,12 @@ const CourseItem = () => {
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [searchQuery]); // Chỉ chạy lại khi `searchQuery` thay đổi
 
   return (
     <View>
       {courses.length > 0 ? (
-        courses.map(course => (
+        courses.map((course) => (
           <View key={course.id} style={styles.cardContainer}>
             <TouchableOpacity 
               onPress={() => navigation.navigate("ReviewCourseScreen", { courseId: course.id })}
@@ -68,7 +83,7 @@ const CourseItem = () => {
           </View>
         ))
       ) : (
-        <Text>Không có khóa học nào </Text>
+        <Text style={{ textAlign: 'center', marginTop: 20 }}>Không tìm thấy khóa học nào.</Text>
       )}
     </View>
   );
@@ -150,4 +165,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default CourseItem;
+export default CourseSearch;
