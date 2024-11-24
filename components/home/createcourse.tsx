@@ -170,7 +170,3 @@ const styles = StyleSheet.create({
 });
 
 export default CreateCourseScreen;
-function isValidImageUrl(imageUrl: string) {
-    throw new Error('Function not implemented.');
-}
-
