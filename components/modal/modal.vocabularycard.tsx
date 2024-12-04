@@ -3,8 +3,9 @@ import { View, Text, TouchableOpacity, StyleSheet, Modal } from 'react-native';
 import AntDesign from '@expo/vector-icons/AntDesign';
 import { NavigationProp, useNavigation } from '@react-navigation/native';
 import { globalFont } from '../../utils/const';
-import { addDoc, collection, doc, getDoc, getDocs, query, updateDoc, where } from 'firebase/firestore';
+import { addDoc, collection, doc, getDoc, getDocs, increment, query, updateDoc, where } from 'firebase/firestore';
 import { db } from '../../fireBaseConfig';
+import Sound from 'react-native-sound';
 
 interface Vocabulary {
     englishWord: string;
@@ -19,11 +20,12 @@ interface Iprops {
     currentUserId: string
     lessonId: string
     courseId: string
+    courseTitle: string
 }
 
 const VocabularyCard = (props: Iprops) => {
     const navigation: NavigationProp<any> = useNavigation();
-    const { modalVisible, setModalVisible, vocabularies, currentUserId, lessonId, courseId } = props;
+    const { modalVisible, setModalVisible, vocabularies, currentUserId, lessonId, courseId, courseTitle } = props;
 
     const [currentIndex, setCurrentIndex] = useState(0);
     const [currentScreen, setCurrentScreen] = useState('screen1');
@@ -50,19 +52,19 @@ const VocabularyCard = (props: Iprops) => {
                 )
             );
             const learnedWordIds = progressQuerySnapshot.docs.map(doc => doc.data().vocab_id);
-    
+
             vocabularies.forEach(vocab => {
                 if (!learnedWordIds.includes(vocab.wordId)) {
                     unlearnedVocabularies.push(vocab);
                 }
             });
-    
+
             setFilteredVocabularies(unlearnedVocabularies);
         } catch (error) {
             console.error("Error fetching unlearned vocabularies: ", error);
         }
     };
-    
+
     // Trong useEffect, chỉ cần gọi hàm
     useEffect(() => {
         fetchUnlearnedVocabularies();
@@ -78,44 +80,135 @@ const VocabularyCard = (props: Iprops) => {
 
     const getRandomOptions = () => {
         if (filteredVocabularies.length === 0) return [];
+
         const currentVocabulary = filteredVocabularies[currentIndex];
         const optionsSet = new Set<string>([currentVocabulary.englishWord]);
+        const maxAttempts = 10; // Giới hạn số lần lặp để tránh vô hạn
 
-        while (optionsSet.size < Math.min(4, filteredVocabularies.length)) {
+        // Bổ sung từ filteredVocabularies (từ chưa học)
+        let attempts = 0;
+        while (optionsSet.size < 4 && attempts < maxAttempts) {
             const randomIndex = Math.floor(Math.random() * filteredVocabularies.length);
             optionsSet.add(filteredVocabularies[randomIndex].englishWord);
+            attempts++;
         }
 
-        return Array.from(optionsSet);
+        // Nếu chưa đủ 4, bổ sung từ vocabularies (tất cả từ)
+        attempts = 0; // Reset lại bộ đếm
+        while (optionsSet.size < 4 && attempts < maxAttempts) {
+            const randomIndex = Math.floor(Math.random() * vocabularies.length);
+            const randomWord = vocabularies[randomIndex].englishWord;
+            optionsSet.add(randomWord); // Thêm từ nếu chưa có trong Set
+            attempts++;
+        }
+
+        // Nếu không thể đủ 4 tùy chọn, cảnh báo
+        if (optionsSet.size < 4) {
+        }
+
+        return Array.from(optionsSet).sort(() => Math.random() - 0.5); // Trả về danh sách đã ngẫu nhiên hóa
     };
+
 
     const options = useMemo(() => getRandomOptions(), [currentIndex, filteredVocabularies]);
 
-    const handleOptionSelect = (option: string) => {
-        if (!isSelecting) return;
-        setSelectedOption(option);
-        setShowCorrectAnswer(false);
-        setActionTaken(true);
-        setIsSelecting(false);
-
-        if (option === correctAnswer) {
-            setTotalScore((prevScore) => prevScore + 1000);
-            setTimeout(() => {
-                handleNextVocabulary();
-            }, 500);
-        }
+    const playAudio = (audioFile) => {
+        const sound = new Sound(audioFile, Sound.MAIN_BUNDLE, (error) => {
+            if (error) {
+                console.log('Error loading sound:', error.message);
+                return;
+            }
+            sound.setVolume(1.0); // Âm thanh lớn nhất
+            sound.play((success) => {
+                if (!success) {
+                    console.log('Playback failed');
+                } else {
+                    console.log('Playback completed');
+                }
+            });
+        });
     };
 
+    const updateLeaderboard = async (userId: string, courseId: string, score: number) => {
+        try {
+            const leaderboardRef = collection(db, 'Course_Leaderboard');
+            const leaderboardQuery = query(
+                leaderboardRef,
+                where('user_id', '==', userId),
+                where('course_id', '==', courseId)
+            );
+            const snapshot = await getDocs(leaderboardQuery);
+    
+            if (!snapshot.empty) {
+                // Nếu đã có điểm, cập nhật tổng điểm
+                const docId = snapshot.docs[0].id;
+                const userDocRef = doc(db, 'Course_Leaderboard', docId);
+                await updateDoc(userDocRef, {
+                    totalScore: increment(score), // Cộng thêm điểm mới
+                    updated_at: new Date().toISOString()
+                });
+            } else {
+                // Nếu chưa có, tạo mới
+                await addDoc(leaderboardRef, {
+                    user_id: userId,
+                    course_id: courseId,
+                    totalScore: score,
+                    updated_at: new Date().toISOString()
+                });
+            }
+            console.log('Leaderboard updated successfully!');
+        } catch (error) {
+            console.error('Error updating leaderboard:', error);
+        }
+    };
+    
+
+
+    const handleOptionSelect = async (option: string) => {
+        if (!isSelecting) return; // Ngăn chặn chọn lại nếu đã chọn
+        setSelectedOption(option);
+        setActionTaken(true); // Đánh dấu đã thực hiện hành động
+        setIsSelecting(false); // Ngừng cho phép chọn thêm
+    
+        if (option === correctAnswer) {
+            // Nếu đáp án đúng, tăng điểm và chuyển sang screen3
+            const scoreToAdd = 1000;
+            setTotalScore((prevScore) => prevScore + scoreToAdd);
+    
+            // Cập nhật điểm lên Firestore
+            try {
+                await updateLeaderboard(currentUserId, courseId, scoreToAdd); // userId, courseId và username cần được truyền vào component
+                console.log('Điểm đã được cập nhật lên Firestore!');
+            } catch (error) {
+                console.error('Lỗi khi cập nhật điểm:', error);
+            }
+    
+            // Chuyển sang màn hình screen3 sau 500ms
+            setTimeout(() => {
+                setCurrentScreen('screen3');
+            }, 500);
+        } else {
+            // Nếu đáp án sai, chỉ hiện đáp án đúng trên screen2
+            setShowCorrectAnswer(true); // Hiển thị câu trả lời đúng
+        }
+    };
+    
+
+
+
+
+
     const handleDontKnowPress = () => {
-        setShowCorrectAnswer(true);
-        setActionTaken(true);
+        setShowCorrectAnswer(true); // Hiển thị câu trả lời đúng
+        setActionTaken(true); // Đánh dấu rằng người dùng đã thực hiện hành động
     };
 
     const handleNextVocabulary = () => {
+        // Chuyển sang từ vựng tiếp theo hoặc kết thúc
         handleCompleteLearning(filteredVocabularies[currentIndex].wordId, currentUserId, lessonId);
         if (currentIndex + 1 === filteredVocabularies.length) {
             setProgress(100);
-            setCurrentScreen('screen4');
+            setCurrentScreen('screen4'); // Kết thúc học
         } else {
             const newIndex = currentIndex + 1;
             setProgress(((newIndex) / filteredVocabularies.length) * 100);
@@ -128,6 +221,7 @@ const VocabularyCard = (props: Iprops) => {
             setCorrectAnswer(filteredVocabularies[newIndex]?.englishWord || '');
         }
     };
+
 
     const handleCompleteLearning = async (vocabId: string, currentUserId: string, lessonId: string) => {
         try {
@@ -178,87 +272,87 @@ const VocabularyCard = (props: Iprops) => {
             console.error("Error adding User_Progress record: ", error);
         }
     };
-    
 
-    
 
-        
-        const updateCourseProgress = async (currentUserId, courseId) => {
-            try {
-                // 1. Lấy tất cả các bài học trong khóa học
-                const lessonsSnapshot = await getDocs(
-                    query(collection(db, 'Lessons'), where('courseId', '==', courseId))
+
+
+
+    const updateCourseProgress = async (currentUserId, courseId) => {
+        try {
+            // 1. Lấy tất cả các bài học trong khóa học
+            const lessonsSnapshot = await getDocs(
+                query(collection(db, 'Lessons'), where('courseId', '==', courseId))
+            );
+            const totalLessons = lessonsSnapshot.size;
+
+            // Kiểm tra nếu không có bài học nào
+            if (totalLessons === 0) {
+                console.error("Không tìm thấy bài học nào trong khóa học.");
+                return;
+            }
+
+            let totalVocabulary = 0;   // Tổng số từ vựng trong khóa học
+            let learnedVocabulary = 0; // Số từ vựng đã học trong khóa học
+
+            // 2. Tính tổng số từ vựng và số từ vựng đã học cho từng bài học
+            for (const lessonDoc of lessonsSnapshot.docs) {
+                const lessonId = lessonDoc.id;
+
+                // 2.1 Lấy số lượng từ vựng trong bài học
+                const vocabQuerySnapshot = await getDocs(
+                    query(collection(db, 'Vocabularies'), where('lessonId', '==', lessonId))
                 );
-                const totalLessons = lessonsSnapshot.size;
-        
-                // Kiểm tra nếu không có bài học nào
-                if (totalLessons === 0) {
-                    console.error("Không tìm thấy bài học nào trong khóa học.");
-                    return;
-                }
-        
-                let totalVocabulary = 0;   // Tổng số từ vựng trong khóa học
-                let learnedVocabulary = 0; // Số từ vựng đã học trong khóa học
-        
-                // 2. Tính tổng số từ vựng và số từ vựng đã học cho từng bài học
-                for (const lessonDoc of lessonsSnapshot.docs) {
-                    const lessonId = lessonDoc.id;
-        
-                    // 2.1 Lấy số lượng từ vựng trong bài học
-                    const vocabQuerySnapshot = await getDocs(
-                        query(collection(db, 'Vocabularies'), where('lessonId', '==', lessonId))
-                    );
-                    const lessonTotalVocabulary = vocabQuerySnapshot.size;  // Số từ vựng của bài học
-                    totalVocabulary += lessonTotalVocabulary;  // Cộng số từ vựng vào tổng số từ vựng của khóa học
-        
-                    // 2.2 Lấy số lượng từ vựng đã học của người dùng trong bài học
-                    const learnedVocabQuerySnapshot = await getDocs(
-                        query(
-                            collection(db, 'User_Progress'),
-                            where('user_id', '==', currentUserId),
-                            where('lesson_id', '==', lessonId),
-                            where('status', 'in', ['đã học']) // Learning statuses
-                        )
-                    );
-                    learnedVocabulary += (learnedVocabQuerySnapshot.size);  // Cộng số từ vựng đã học vào tổng số từ vựng đã học
-                }
-        
-                // 3. Tính tiến độ khóa học dựa trên số từ vựng đã học
-                const courseProgress = totalVocabulary > 0 ? (learnedVocabulary / totalVocabulary) * 100 : 0;
-        
-                // 4. Cập nhật tiến độ khóa học trong bảng User_Course nếu tiến độ hợp lệ
-                const userCourseQuerySnapshot = await getDocs(
+                const lessonTotalVocabulary = vocabQuerySnapshot.size;  // Số từ vựng của bài học
+                totalVocabulary += lessonTotalVocabulary;  // Cộng số từ vựng vào tổng số từ vựng của khóa học
+
+                // 2.2 Lấy số lượng từ vựng đã học của người dùng trong bài học
+                const learnedVocabQuerySnapshot = await getDocs(
                     query(
-                        collection(db, 'User_Course'),
+                        collection(db, 'User_Progress'),
                         where('user_id', '==', currentUserId),
-                        where('course_id', '==', courseId)
+                        where('lesson_id', '==', lessonId),
+                        where('status', 'in', ['đã học']) // Learning statuses
                     )
                 );
-        
-                if (!userCourseQuerySnapshot.empty && !isNaN(courseProgress)) {
-                    const userCourseDocRef = userCourseQuerySnapshot.docs[0].ref;
-                    await updateDoc(userCourseDocRef, { progress: courseProgress.toFixed(2) });
-                } else {
-                    console.warn("Không thể cập nhật tiến độ khóa học: không tìm thấy bản ghi người dùng-khóa học hoặc tiến độ là NaN.");
-                }
-        
-            } catch (error) {
-                console.error("Lỗi khi cập nhật tiến độ khóa học: ", error);
+                learnedVocabulary += (learnedVocabQuerySnapshot.size);  // Cộng số từ vựng đã học vào tổng số từ vựng đã học
             }
-        };
-        
-        
-        
-        
-    
-    
+
+            // 3. Tính tiến độ khóa học dựa trên số từ vựng đã học
+            const courseProgress = totalVocabulary > 0 ? (learnedVocabulary / totalVocabulary) * 100 : 0;
+
+            // 4. Cập nhật tiến độ khóa học trong bảng User_Course nếu tiến độ hợp lệ
+            const userCourseQuerySnapshot = await getDocs(
+                query(
+                    collection(db, 'User_Course'),
+                    where('user_id', '==', currentUserId),
+                    where('course_id', '==', courseId)
+                )
+            );
+
+            if (!userCourseQuerySnapshot.empty && !isNaN(courseProgress)) {
+                const userCourseDocRef = userCourseQuerySnapshot.docs[0].ref;
+                await updateDoc(userCourseDocRef, { progress: courseProgress.toFixed(2) });
+            } else {
+                console.warn("Không thể cập nhật tiến độ khóa học: không tìm thấy bản ghi người dùng-khóa học hoặc tiến độ là NaN.");
+            }
+
+        } catch (error) {
+            console.error("Lỗi khi cập nhật tiến độ khóa học: ", error);
+        }
+    };
+
+
+
+
+
+
 
 
     const renderScreen = () => {
         const currentVocabulary = filteredVocabularies[currentIndex];
 
         if (!currentVocabulary) {
-            return <Text>No vocabulary to display.</Text>;
+            return <Text style={styles.textnone}>Không có từ vựng mới</Text>;
         }
 
         switch (currentScreen) {
@@ -281,13 +375,19 @@ const VocabularyCard = (props: Iprops) => {
 
                         <View style={styles.soundButton}>
                             <Text style={styles.typeLabel}>AUDIO</Text>
-                            <TouchableOpacity style={styles.soundButtonclick}>
+                            <TouchableOpacity
+                                style={styles.soundButtonclick}
+                                onPress={() => playAudio(currentVocabulary.localPath)}
+                            >
                                 <AntDesign name="sound" size={30} color="black" />
                             </TouchableOpacity>
+
+
+
                         </View>
 
-                        <TouchableOpacity 
-                            style={styles.nextButton} 
+                        <TouchableOpacity
+                            style={styles.nextButton}
                             onPress={() => {
                                 handleStartLearning(currentVocabulary.wordId, currentUserId, lessonId); // Gọi hàm với từ vựng hiện tại
                                 setCurrentScreen('screen2');
@@ -306,8 +406,9 @@ const VocabularyCard = (props: Iprops) => {
                         <View style={styles.containerscr2box}>
 
                             <View style={styles.soundContainer}>
-                                <TouchableOpacity style={styles.soundButtonb}>
+                                <TouchableOpacity style={styles.soundButtonb} onPress={() => playAudio(currentVocabulary.localPath)}>
                                     <AntDesign name="sound" size={40} color="black" />
+
                                 </TouchableOpacity>
                                 <Text style={styles.label}>{currentVocabulary.wordType}</Text>
                             </View>
@@ -338,12 +439,26 @@ const VocabularyCard = (props: Iprops) => {
 
                         {/* "I don't know" button */}
                         <TouchableOpacity
-                            style={[styles.dontKnowButton, actionTaken && styles.nextButton]} // Combine styles
-                            onPress={actionTaken ? () => setCurrentScreen('screen3') : handleDontKnowPress}
+                            style={[styles.dontKnowButton, actionTaken && styles.nextButton]} // Kết hợp style
+                            onPress={() => {
+                                if (actionTaken) {
+                                    // Nếu người dùng đã chọn, chuyển màn hình hoặc tiếp tục
+                                    setCurrentScreen('screen3'); // Chuyển sang màn hình 3
+                                } else {
+                                    handleDontKnowPress(); // Nếu chưa chọn gì, xử lý trường hợp "Tôi không biết"
+                                }
+                            }}
                         >
-                            <Text style={[styles.dontKnowText, actionTaken && styles.whiteText]}>{actionTaken ? 'Tiếp theo' : '? Tôi không biết'}</Text>
-                            {actionTaken && (<AntDesign name="arrowright" size={24} color="white" style={styles.icon} />)}
+                            <Text style={[styles.dontKnowText, actionTaken && styles.whiteText]}>
+                                {actionTaken ? 'Tiếp theo' : '? Tôi không biết'}
+                            </Text>
+                            {actionTaken && (
+                                <AntDesign name="arrowright" size={24} color="white" style={styles.icon} />
+                            )}
                         </TouchableOpacity>
+
+
+
 
                     </View>
 
@@ -391,13 +506,13 @@ const VocabularyCard = (props: Iprops) => {
                         </TouchableOpacity>
                     </View>
                 );
-                case 'screen4': // New screen for summary
-            return (
-                <View style={styles.summaryContainer}>
-                    <Text style={styles.summaryText}>Tổng điểm: {totalScore}</Text>
-                    <Text style={styles.summaryText}>Số từ đã học: {currentIndex+1}</Text>
-                </View>
-            );
+            case 'screen4': // New screen for summary
+                return (
+                    <View style={styles.summaryContainer}>
+                        <Text style={styles.summaryText}>Tổng điểm: {totalScore}</Text>
+                        <Text style={styles.summaryText}>Số từ đã học: {currentIndex + 1}</Text>
+                    </View>
+                );
             default:
                 return null;
         }
@@ -427,7 +542,7 @@ const VocabularyCard = (props: Iprops) => {
             <View style={styles.container}>
 
                 <View style={styles.header}>
-                    <Text style={styles.headerText}>Bộ từ vựng AA</Text>
+                    <Text style={styles.headerText}>{courseTitle}</Text>
                     <TouchableOpacity onPress={() => {
                         setModalVisible(false);
                         setCurrentScreen('screen1'); // Đặt lại về screen1
@@ -448,12 +563,12 @@ const VocabularyCard = (props: Iprops) => {
                 <View style={styles.progressBarbox}>
                     <View style={styles.progressBarContainer}>
                         <View style={styles.progressBar}>
-                            <Text style={[styles.progress, { width: `${progress}%` }]}></Text> 
+                            <Text style={[styles.progress, { width: `${progress}%` }]}></Text>
                         </View>
 
                     </View>
                     <View style={styles.customprogressText}>
-                        <Text style={styles.progressText}>{totalScore}</Text> 
+                        <Text style={styles.progressText}>{totalScore}</Text>
                     </View>
                 </View>
                 {renderScreen()}
@@ -515,9 +630,13 @@ const styles = StyleSheet.create({
     soundContainer: {
         flexDirection: 'column',
         alignItems: 'center',
+        justifyContent: 'center',
         marginBottom: 30,
     },
     soundButtonb: {
+        width: '100%',
+        alignItems: 'center',
+        justifyContent: 'center',
         padding: 40,
         borderRadius: 80,
         backgroundColor: '#fff',
@@ -536,6 +655,8 @@ const styles = StyleSheet.create({
         borderRadius: 20,
         fontSize: 16,
         fontWeight: 'bold',
+        width: '100%',
+        textAlign: 'center'
     },
     optionsContainer: {
     },
@@ -755,6 +876,12 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         color: '#000', // Màu của số 1548
         fontFamily: globalFont,
+    },
+    textnone: {
+        textAlign: 'center',
+        fontSize: 16,
+        fontFamily: globalFont,
+
     },
     customprogressText: {
         display: 'flex',

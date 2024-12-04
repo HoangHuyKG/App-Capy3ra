@@ -97,6 +97,7 @@ const styles = StyleSheet.create({
         marginLeft: 20,
         fontSize: 18,
         fontFamily: globalFont,
+        fontWeight: '600'
       },
   });
 
@@ -120,7 +121,8 @@ const StartedLoginScreen = () => {
           const user = userCredential.user;
           const userRef = doc(db, 'Users', user.uid);
           const userSnapshot = await getDoc(userRef);
-      
+          const ggid = data.data?.user?.id; 
+          const photo = data.data?.user?.photo;
           // Kiểm tra nếu người dùng chưa tồn tại trước khi thêm dữ liệu
           if (!userSnapshot.exists()) {
             // Thêm người dùng nếu chưa có trong Firestore
@@ -132,6 +134,8 @@ const StartedLoginScreen = () => {
               country: user.country || '', // Google không trả về quốc gia
               phone: user.phoneNumber || '', // Số điện thoại từ Google, có thể không có
               address: '', // Địa chỉ mặc định là rỗng, người dùng có thể cập nhật sau
+              ggid: ggid,
+              photo: photo
             });
             // Xóa console.log
           } 

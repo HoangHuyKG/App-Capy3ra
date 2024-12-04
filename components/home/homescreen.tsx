@@ -26,6 +26,8 @@ const styles = StyleSheet.create({
         borderRadius: 10,
     },
     boxchangetext: {
+        fontSize: 16,
+        fontWeight: '800',
         color: '#fff',
         fontFamily: globalFont,
     },

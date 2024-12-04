@@ -3,7 +3,7 @@ import { useNavigation } from "@react-navigation/native";
 import { deleteDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { db } from '../../fireBaseConfig';
 import { globalFont } from "../../utils/const";
-
+import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 const styles = StyleSheet.create({
   container: {
       flex: 1,
@@ -117,7 +117,19 @@ const ModalMenu = ({ modalVisible, setModalVisible, courseId, userId }: Iprops) 
   
       const courseDeletePromises = courseSnapshot.docs.map((doc) => deleteDoc(doc.ref));
       await Promise.all(courseDeletePromises);
+
+      const leaderboardRef = collection(db, "Course_Leaderboard");
+      const leaderboardQuery = query(
+        leaderboardRef,
+        where("course_id", "==", courseId),
+        where("user_id", "==", userId)
+      );
+      const leaderboardSnapshot = await getDocs(leaderboardQuery);
   
+      if (!leaderboardSnapshot.empty) {
+        const leaderboardDeletePromises = leaderboardSnapshot.docs.map((doc) => deleteDoc(doc.ref));
+        await Promise.all(leaderboardDeletePromises);
+      }
       Alert.alert("Thông báo", "Bạn đã rời khỏi khóa học thành công.");
       setModalVisible(false);
   
@@ -148,15 +160,15 @@ const ModalMenu = ({ modalVisible, setModalVisible, courseId, userId }: Iprops) 
             <Text style={styles.modalText}>Chi tiết khóa học</Text>
           </TouchableOpacity>
 
-          {/* <TouchableOpacity
+          <TouchableOpacity
             style={styles.modalItem2}
             onPress={() => {
               setModalVisible(false);
-              navigation.navigate("Leaderboard");
+              navigation.navigate("Leaderboard", { courseId });
             }}
           >
             <Text style={styles.modalText}>Bảng xếp hạng</Text>
-          </TouchableOpacity> */}
+          </TouchableOpacity>
 
           {/* Red Text Option */}
           <TouchableOpacity style={styles.modalItem} onPress={leaveCourse}>

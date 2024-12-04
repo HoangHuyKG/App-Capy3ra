@@ -12,7 +12,8 @@ import VocabularyCard from '../modal/modal.vocabularycard';
 import EditVocabularyModal from '../modal/modal.editvocalbulary';
 import EditLessonModal from '../modal/modal.editlesson';
 import { useUser } from './UserContext';
-
+import Entypo from '@expo/vector-icons/Entypo';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 const DetailVocabularyDay = () => {
     const [modalVisible, setModalVisible] = useState(false);
     const [modalVisiblelearn, setModalVisiblelearn] = useState(false);
@@ -148,7 +149,7 @@ const DetailVocabularyDay = () => {
             // Kiểm tra khóa học trong Firestore
             const userCourseQuery = query(
                 collection(db, 'User_Course'),
-                where('user_course_id', '==',  userCourseId) // So sánh bằng ID duy nhất
+                where('user_course_id', '==', userCourseId) // So sánh bằng ID duy nhất
             );
             const querySnapshot = await getDocs(userCourseQuery);
 
@@ -212,24 +213,38 @@ const DetailVocabularyDay = () => {
             <AppHeader />
             <View style={styles.containerbox}>
                 <View style={styles.header}>
-                    {currentUserId === courseData.idUser ? (
-                        <View style={styles.creator}>
-                            <TouchableOpacity style={styles.buttonstudya} onPress={() => setModalVisibleeditlesson(true)}>
-                                <View style={styles.buttonboxx}>
-                                    <AntDesign name="edit" size={24} color="white" />
-                                    <Text style={styles.textbutton}>Chỉnh sửa</Text>
-                                </View>
-                            </TouchableOpacity>
-                            <TouchableOpacity style={styles.buttonstudya} onPress={() => setModalVisible(true)}>
-                                <View style={styles.buttonboxx}>
-                                    <AntDesign name="pluscircleo" size={20} color="white" />
-                                    <Text style={styles.textbutton}>Thêm từ vựng</Text>
-                                </View>
-                            </TouchableOpacity>
+
+
+                    <View style={styles.creator}>
+                        <View style={styles.boxdescription}>
+                            <Text style={styles.textdescription}>
+                                {lessonData.description}
+                            </Text>
                         </View>
-                    ) : (
-                        <View></View>
-                    )}
+                        {currentUserId === courseData.idUser && (
+                            <View style={styles.buttonbox}>
+                                 <TouchableOpacity
+                                    style={styles.buttonstudya}
+                                    onPress={() => setModalVisible(true)}
+                                >
+                                    <View style={styles.buttonboxx}>
+                                        <Entypo name="circle-with-plus" size={24} color="white" />
+
+                                    </View>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    style={styles.buttonstudyb}
+                                    onPress={() => setModalVisibleeditlesson(true)}
+                                >
+                                    <View style={styles.buttonboxx}>
+                                     <MaterialIcons name="edit" size={24} color="white" />
+                                    </View>
+                                </TouchableOpacity>
+                               
+                            </View>
+                        )}
+                    </View>
+
                 </View>
             </View>
             <View style={styles.dayInfo}>
@@ -245,24 +260,13 @@ const DetailVocabularyDay = () => {
                         handleAddUserCourse();
                         setModalVisiblelearn(true);
                     }}>
-                        <Text style={styles.reviewText}>Học</Text>
+                        <Text style={styles.reviewText}>Học từ mới</Text>
                     </TouchableOpacity>
                 </View>
             </View>
 
             <View style={styles.mainContent}>
-                <View style={styles.headerRow}>
-                    <View style={styles.headerColumnEn}>
-                        <Text style={styles.headerText}>Tiếng Anh</Text>
-                    </View>
-                    <View style={styles.headerColumnVn}>
-                        <Text style={styles.headerText}>Tiếng Việt</Text>
-                    </View>
-                    <View style={styles.headerColumnType}>
-                        <Text style={styles.headerText}>Từ loại</Text>
-                    </View>
-                </View>
-
+             
                 <FlatList
                     data={vocabularies}
                     renderItem={renderItem}
@@ -271,13 +275,12 @@ const DetailVocabularyDay = () => {
             </View>
 
             <AddVocabularyModal modalVisible={modalVisible} setModalVisible={setModalVisible} lessonId={lessonId} />
-            <VocabularyCard modalVisible={modalVisiblelearn} setModalVisible={setModalVisiblelearn} vocabularies={vocabularies} currentUserId={currentUserId} lessonId={lessonId} courseId={courseData.courseId} />
+            <VocabularyCard modalVisible={modalVisiblelearn} setModalVisible={setModalVisiblelearn} vocabularies={vocabularies} currentUserId={currentUserId} lessonId={lessonId} courseId={courseData.courseId} courseTitle={courseData.title} />
             <EditVocabularyModal modalVisible={modalVisibleedit} setModalVisible={setModalVisibleedit} vocabId={vocabId} />
             <EditLessonModal modalVisible={modalVisibleeditlesson} setModalVisible={setModalVisibleeditlesson} lessonId={lessonId} />
         </View>
     );
 };
-
 const styles = StyleSheet.create({
 
     container: {
@@ -292,6 +295,22 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'center',
         alignItems: 'center'
+    },
+    textdescription: {
+        fontSize: 16,
+        fontFamily: globalFont,
+        color: '#fff'
+    },
+    buttonbox: {
+        flex: 1,
+        flexDirection: 'row',
+        justifyContent: 'flex-end',
+        alignItems: 'flex-end'
+    },
+    boxdescription: {
+        display: 'flex',
+        justifyContent: 'center',
+
     },
     boxtextbutton: {
         fontFamily: globalFont,
@@ -314,18 +333,32 @@ const styles = StyleSheet.create({
         backgroundColor: "#25B212",
         padding: 10,
         borderRadius: 10,
-
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        margin: 10
+    },
+    buttonstudyb: {
+        backgroundColor: "#FFC107",
+        padding: 10,
+        borderRadius: 10,
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        margin: 10
     },
     boxbutton: {
         marginHorizontal: 10,
         display: 'flex',
         justifyContent: 'center',
-        flexDirection: 'row',
+        alignItems: 'center'
+
     },
     boxtop: {
         display: 'flex',
-        flexDirection: 'row',
-        justifyContent: 'center'
+        justifyContent: 'center',
+        alignItems: 'center'
+
     },
     header: {
         borderTopWidth: 1,
@@ -334,12 +367,13 @@ const styles = StyleSheet.create({
         padding: 20,
         borderBottomLeftRadius: 10,
         borderBottomRightRadius: 10,
+        justifyContent: 'center',
     },
     dayInfoBox: {
         display: 'flex',
         flexDirection: 'column',
         flex: 1,
-        marginLeft: 10,
+        marginLeft: 20,
     },
     progressBarContainer: {
         shadowColor: '#cfd3d3',
@@ -374,14 +408,11 @@ const styles = StyleSheet.create({
     dayImage: {
         backgroundColor: '#F2F2F7',
         borderRadius: 10,
-        width: 100,
+        width: 110,
         height: '100%',
     },
     creator: {
         flexDirection: 'row',
-        alignItems: 'center',
-        marginTop: 10,
-        justifyContent: "space-between",
     },
     avatar: {
         width: 40,
@@ -420,11 +451,13 @@ const styles = StyleSheet.create({
         borderRadius: 10,
     },
     dayText: {
-        fontSize: 16,
+        fontSize: 18,
+        fontWeight: 'bold',
         fontFamily: globalFont,
+        marginBottom: 10,   
     },
     reviewText: {
-        fontSize: 16,
+        fontSize: 18,
         fontFamily: globalFont,
         textAlign: 'center'
     },
@@ -478,14 +511,12 @@ const styles = StyleSheet.create({
         flex: 3,
         paddingHorizontal: 5, // Giới hạn padding để text không bị dãn quá nhiều
         paddingVertical: 10,
-        borderRightWidth: 1, // Đường chia cột bên phải
         borderRightColor: '#000',
     },
     headerColumnVn: {
         flex: 3,
         paddingHorizontal: 5,
         paddingVertical: 10,
-        borderRightWidth: 1, // Đường chia cột bên phải
         borderRightColor: '#000',
     },
     headerColumnType: {
@@ -497,7 +528,7 @@ const styles = StyleSheet.create({
     tableRow: {
         flexDirection: 'row',
         borderBottomWidth: 1,
-        borderBottomColor: '#000', // Đường viền dưới mỗi hàng
+        borderBottomColor: '#F2F2F7', // Đường viền dưới mỗi hàng
         backgroundColor: '#FFFFFF',
     },
     columnEn: {
@@ -507,7 +538,6 @@ const styles = StyleSheet.create({
         color: '#4E4E4E',
         paddingHorizontal: 5,
         paddingVertical: 10,
-        borderRightWidth: 1, // Đường chia cột bên phải
         borderRightColor: '#000', // Màu đường chia cột
         textAlign: 'center'
 
@@ -520,9 +550,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 5,
         paddingVertical: 10,
         textAlign: 'center',
-
-        borderRightWidth: 1, // Đường chia cột bên phải
-        borderRightColor: '#000', // Màu đường chia cột
+        borderRightColor: '#F2F2F7', // Màu đường chia cột
     },
     columnType: {
         flex: 2,

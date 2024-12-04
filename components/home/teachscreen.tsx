@@ -20,7 +20,8 @@ const styles = StyleSheet.create({
         backgroundColor: '#e6f4f5',
     },
     box: {
-        marginHorizontal: 20
+        marginHorizontal: 20,
+        alignItems: 'center',
     },
     cardContainer: {
         backgroundColor: '#fff',
@@ -45,6 +46,8 @@ const styles = StyleSheet.create({
         borderRadius: 10,
     },
     boxchangetext: {
+      fontWeight: 'bold',
+      fontSize: 16,
         color: '#fff',
         fontFamily: globalFont,
     },
@@ -53,6 +56,7 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         marginBottom: 20,
         color: '#333',
+        textAlign: 'center',
         fontFamily: globalFont,
     },
     description: {
@@ -63,12 +67,18 @@ const styles = StyleSheet.create({
         fontFamily: globalFont,
     },
     button: {
+      width: 200,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
         backgroundColor: '#02929A',
         paddingVertical: 15,
         paddingHorizontal: 30,
         borderRadius: 10,
     },
     buttonText: {
+      alignItems: 'center',
+      justifyContent: 'center',
         color: '#fff',
         fontSize: 16,
         fontWeight: 'bold',
@@ -188,10 +198,14 @@ const TeachScreen = () => {
           onPress={() => navigation.navigate("ReviewCourseScreen", { courseId: item.id })}
         >
           <View style={styles.header}>
-            <Image
-              source={{ uri: item.imageUrl || 'https://via.placeholder.com/150' }}
-              style={styles.courseImage}
-            />
+          <Image
+                  source={{
+                    uri: item.imageUrl.startsWith('/data/user/')
+                      ? `file://${item.imageUrl}`
+                      : item.imageUrl || 'https://via.placeholder.com/150',
+                  }}
+                  style={styles.courseImage}
+                />
             <View style={styles.categoryIcon}>
               <Image
                 source={{ uri: item.imageUser || 'https://via.placeholder.com/150' }}
@@ -237,11 +251,12 @@ const TeachScreen = () => {
             />
             {courses.length > 0 ? (
                 <FlatList
-                    data={courses}
-                    renderItem={renderCourseItem}
-                    keyExtractor={(item) => item.id}
-                    style={styles.box}
-                />
+                data={courses}
+                renderItem={renderCourseItem}
+                keyExtractor={(item) => item.id}
+                contentContainerStyle={styles.box} // Changed from `style` to `contentContainerStyle`
+            />
+            
             ) : (
                 <View style={styles.box}>
                     <Text style={styles.title}>Ở đây chưa có khóa học nào!</Text>

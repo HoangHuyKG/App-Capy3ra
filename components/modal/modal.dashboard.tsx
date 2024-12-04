@@ -6,6 +6,9 @@ import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 import { globalFont } from "../../utils/const";
 import { NavigationProp, useNavigation } from "@react-navigation/native";
 import { MaterialIcons } from '@expo/vector-icons'; // Use this for the close icon or icons
+import ReviewVocabularyModal from "./modal.ontap";
+import { useState } from "react";
+import VocabularyCard from "./modal.vocabularycard";
 const styles = StyleSheet.create({
     container: {
         flex: 1,
@@ -62,6 +65,7 @@ const styles = StyleSheet.create({
 
       },
       mainButton: {
+        width: 200,
         backgroundColor: '#26A69A',
         paddingVertical: 12,
         paddingHorizontal: 25,
@@ -72,8 +76,8 @@ const styles = StyleSheet.create({
         color: '#fff',
         fontSize: 16,
         fontWeight: 'bold',
-        fontFamily: globalFont
-
+        fontFamily: globalFont,
+        textAlign: 'center'
       },
       secondaryText: {
         fontSize: 14,
@@ -102,10 +106,16 @@ const styles = StyleSheet.create({
 interface Iprops {
     modalVisible: boolean;
     setModalVisible: (v: boolean) => void;
+    vocabularies: string,
+    currentUserId: string,
+    lessonId: string,
+    courseId: string,
 }
 const ModalDashBoard = (props: Iprops) => {
 
-    const {modalVisible, setModalVisible} = props;
+    const {modalVisible, setModalVisible, vocabularies, currentUserId, lessonId, courseId} = props;
+    const [reviewModalVisible, setReviewModalVisible] = useState(false)
+    const [modalVisiblelearn, setModalVisiblelearn] = useState(false)
     return (
         <Modal
         animationType="fade"
@@ -121,33 +131,25 @@ const ModalDashBoard = (props: Iprops) => {
             </TouchableOpacity>
 
             {/* Modal Content */}
-            <Text style={styles.title}>Bộ từ vựng BB</Text>
             <Text style={styles.subtitle}>Tiếp theo dành cho bạn</Text>
 
             {/* Main Button */}
-            <TouchableOpacity style={styles.mainButton}>
-              <Text style={styles.mainButtonText}>Ôn Siêu Tốc</Text>
+            <TouchableOpacity style={styles.mainButton} onPress={() => setReviewModalVisible(true)}>
+              <Text style={styles.mainButtonText}>Ôn tập</Text>
             </TouchableOpacity>
 
-            <Text style={styles.secondaryText}>Hoặc chọn bài học của bạn</Text>
 
-            {/* Icon Buttons */}
-            <View style={styles.iconButtons}>
-              <View style={styles.iconButton}>
-                <MaterialIcons name="book" size={24} color="#333" />
-                <Text style={styles.iconText}>Học từ mới</Text>
-              </View>
-              <View style={styles.iconButton}>
-                <MaterialIcons name="water-drop" size={24} color="#333" />
-                <Text style={styles.iconText}>Ôn tập thông thường</Text>
-              </View>
-              <View style={styles.iconButton}>
-                <MaterialIcons name="timer" size={24} color="#333" />
-                <Text style={styles.iconText}>Ôn siêu tốc</Text>
-              </View>
-            </View>
           </View>
         </View>
+        <ReviewVocabularyModal
+                modalVisible={reviewModalVisible}
+                setModalVisible={setReviewModalVisible}
+                vocabularies={vocabularies}
+                currentUserId={currentUserId}
+                lessonId={lessonId}
+                courseId={courseId}
+            />
+
       </Modal>
 
     )

@@ -17,6 +17,7 @@ import { NavigationProp, useNavigation } from "@react-navigation/native";
 import ModalMenu from "../modal/modal.menu";
 import ModalDashBoard from "../modal/modal.dashboard";
 import { globalFont } from "../../utils/const";
+import ReviewVocabularyModal from "../modal/modal.ontap";
 
 const styles = StyleSheet.create({
     container: {
@@ -38,8 +39,10 @@ const styles = StyleSheet.create({
     },
     itemtoptext: {
         fontFamily: globalFont,
-        fontSize: 16,
-        fontWeight: 'bold'
+        width: '80%',
+        fontSize: 18,
+        fontWeight: 'bold',
+        marginLeft: 10
     },
     itemcenter: {
         display: 'flex',
@@ -86,7 +89,7 @@ const styles = StyleSheet.create({
         borderRadius: 7.5,
         overflow: 'hidden',
     },
-    
+
     itembottom: {
         display: 'flex',
         flexDirection: 'row',
@@ -105,13 +108,18 @@ const styles = StyleSheet.create({
         fontWeight: 'bold'
     },
     itembottombutton: {
+        justifyContent: 'center',
+        alignItems: 'center',
+        width: 150,
         padding: 8,
         backgroundColor: '#02929A',
         borderRadius: 10,
 
     },
     itembottombuttontext: {
-        fontSize: 12,
+        fontSize: 16,
+        textAlign: 'center',
+        fontWeight: '800',
         fontFamily: globalFont,
         color: "#fff"
     },
@@ -180,160 +188,172 @@ const ItemHome = ({ userId }) => {
     const [modalVisible2, setModalVisible2] = useState(false);
     const [selectedCourseId, setSelectedCourseId] = useState(null);
     const [refreshing, setRefreshing] = useState(false);
-  
+    const [reviewModalVisible, setReviewModalVisible] = useState(false)
+    const [vocabularies, setVocabularies] = useState([]);
+    const [currentUserId, setCurrentUserId] = useState(userId); // userId đã có sẵn
+    const [lessonId, setLessonId] = useState(null);
+    const [courseId, setCourseId] = useState(null);
+
     const fetchCourses = useCallback(async () => {
-      const coursesRef = collection(db, "Courses");
-      const userCoursesRef = query(
-        collection(db, "User_Course"),
-        where("user_id", "==", userId)
-      );
-  
-      try {
-        const [coursesSnapshot, userCoursesSnapshot] = await Promise.all([
-          getDocs(coursesRef),
-          getDocs(userCoursesRef),
-        ]);
-  
-        const allCourses = coursesSnapshot.docs.map((doc) => ({
-          ...doc.data(),
-          id: doc.id,
-        }));
-        const userCourses = userCoursesSnapshot.docs.map((doc) => ({
-          ...doc.data(),
-          id: doc.id,
-        }));
-  
-        setCourses(allCourses);
-        setUserCourses(userCourses);
-      } catch (error) {
-        console.error("Error fetching courses:", error);
-      }
+        const coursesRef = collection(db, "Courses");
+        const userCoursesRef = query(
+            collection(db, "User_Course"),
+            where("user_id", "==", userId)
+        );
+
+        try {
+            const [coursesSnapshot, userCoursesSnapshot] = await Promise.all([
+                getDocs(coursesRef),
+                getDocs(userCoursesRef),
+            ]);
+
+            const allCourses = coursesSnapshot.docs.map((doc) => ({
+                ...doc.data(),
+                id: doc.id,
+            }));
+            const userCourses = userCoursesSnapshot.docs.map((doc) => ({
+                ...doc.data(),
+                id: doc.id,
+            }));
+
+            setCourses(allCourses);
+            setUserCourses(userCourses);
+        } catch (error) {
+            console.error("Error fetching courses:", error);
+        }
     }, [userId]);
-  
+
     const calculateVocabulary = useCallback(async (courses) => {
-      const vocabularyMap = {};
-  
-      await Promise.all(
-        courses.map(async (course) => {
-          const lessonsRef = query(
-            collection(db, "Lessons"),
-            where("courseId", "==", course.id)
-          );
-  
-          const lessonsSnapshot = await getDocs(lessonsRef);
-          let totalVocabulary = 0;
-          let learnedVocabulary = 0;
-  
-          await Promise.all(
-            lessonsSnapshot.docs.map(async (lessonDoc) => {
-              const lessonId = lessonDoc.id;
-  
-              // Count total vocabularies
-              const vocabSnapshot = await getDocs(
-                query(collection(db, "Vocabularies"), where("lessonId", "==", lessonId))
-              );
-              totalVocabulary += vocabSnapshot.size;
-  
-              // Count learned vocabularies
-              const learnedSnapshot = await getDocs(
-                query(
-                  collection(db, "User_Progress"),
-                  where("user_id", "==", userId),
-                  where("lesson_id", "==", lessonId),
-                  where("status", "in", ["đã học"])
-                )
-              );
-              learnedVocabulary += learnedSnapshot.size;
+        const vocabularyMap = {};
+
+        await Promise.all(
+            courses.map(async (course) => {
+                const lessonsRef = query(
+                    collection(db, "Lessons"),
+                    where("courseId", "==", course.id)
+                );
+
+                const lessonsSnapshot = await getDocs(lessonsRef);
+                let totalVocabulary = 0;
+                let learnedVocabulary = 0;
+
+                await Promise.all(
+                    lessonsSnapshot.docs.map(async (lessonDoc) => {
+                        const lessonId = lessonDoc.id;
+
+                        // Count total vocabularies
+                        const vocabSnapshot = await getDocs(
+                            query(collection(db, "Vocabularies"), where("lessonId", "==", lessonId))
+                        );
+                        totalVocabulary += vocabSnapshot.size;
+
+                        // Count learned vocabularies
+                        const learnedSnapshot = await getDocs(
+                            query(
+                                collection(db, "User_Progress"),
+                                where("user_id", "==", userId),
+                                where("lesson_id", "==", lessonId),
+                                where("status", "in", ["đã học"])
+                            )
+                        );
+                        learnedVocabulary += learnedSnapshot.size;
+                    })
+                );
+
+                vocabularyMap[course.id] = {
+                    totalVocabulary,
+                    learnedVocabulary,
+                };
             })
-          );
-  
-          vocabularyMap[course.id] = {
-            totalVocabulary,
-            learnedVocabulary,
-          };
-        })
-      );
-  
-      setCourseVocabularyMap(vocabularyMap);
+        );
+
+        setCourseVocabularyMap(vocabularyMap);
     }, [userId]);
-  
+
     const filterUserCourses = useCallback(() => {
-      const matchedCourses = userCourses
-        .map((userCourse) => {
-          const course = courses.find((c) => c.courseId === userCourse.course_id);
-          return course ? { ...course, progress: userCourse.progress } : null;
-        })
-        .filter(Boolean);
-  
-      setFilteredCourses(matchedCourses);
+        const matchedCourses = userCourses
+            .map((userCourse) => {
+                const course = courses.find((c) => c.courseId === userCourse.course_id);
+                return course ? { ...course, progress: userCourse.progress } : null;
+            })
+            .filter(Boolean);
+
+        setFilteredCourses(matchedCourses);
     }, [userCourses, courses]);
-  
+
     const onRefresh = useCallback(async () => {
-      setRefreshing(true);
-      await fetchCourses();
-      setRefreshing(false);
+        setRefreshing(true);
+        await fetchCourses();
+        setRefreshing(false);
     }, [fetchCourses]);
-  
+
     useEffect(() => {
-      const unsubscribe = fetchCourses();
-      return () => unsubscribe;
+        const unsubscribe = fetchCourses();
+        return () => unsubscribe;
     }, [fetchCourses]);
-  
+
     useEffect(() => {
-      filterUserCourses();
+        filterUserCourses();
     }, [userCourses, courses, filterUserCourses]);
-  
+
     useEffect(() => {
-      if (filteredCourses.length > 0) calculateVocabulary(filteredCourses);
+        if (filteredCourses.length > 0) calculateVocabulary(filteredCourses);
     }, [filteredCourses, calculateVocabulary]);
 
     if (filteredCourses.length === 0) {
         return (
-            
+
             <ScrollView
-        refreshControl={
-            <RefreshControl
-                refreshing={refreshing}
-                onRefresh={onRefresh}
-                colors={["#02929A"]} // Màu sắc của spinner khi làm mới
-            />
-        }
-    >
-            <View style={styles.box}>
+                refreshControl={
+                    <RefreshControl
+                        refreshing={refreshing}
+                        onRefresh={onRefresh}
+                        colors={["#02929A"]} // Màu sắc của spinner khi làm mới
+                    />
+                }
+            >
+                <View style={styles.box}>
 
-                <Text style={styles.title}>Ở đây chưa có khóa học nào!</Text>
-                <Text style={styles.description}>
-                    Bạn vẫn chưa tạo ra tham gia khóa học nào. Để tạo tham gia một khóa học, hãy nhấn vào nút bên dưới.
-                </Text>
-                <TouchableOpacity style={styles.button} onPress={() => navigation.navigate("CourseScreen")}>
-                    <Text style={styles.buttonText}>Tham gia khóa học</Text>
-                </TouchableOpacity>
-        </View>
+                    <Text style={styles.title}>Ở đây chưa có khóa học nào!</Text>
+                    <Text style={styles.description}>
+                        Bạn vẫn chưa tạo ra tham gia khóa học nào. Để tạo tham gia một khóa học, hãy nhấn vào nút bên dưới.
+                    </Text>
+                    <TouchableOpacity style={styles.button} onPress={() => navigation.navigate("CourseScreen")}>
+                        <Text style={styles.buttonText}>Tham gia khóa học</Text>
+                    </TouchableOpacity>
+                </View>
 
-                </ScrollView>
+            </ScrollView>
         );
     }
 
     return (
         <ScrollView
-        refreshControl={
-            <RefreshControl
-                refreshing={refreshing}
-                onRefresh={onRefresh}
-                colors={["#02929A"]} // Màu sắc của spinner khi làm mới
-            />
-        }
-    >
+            refreshControl={
+                <RefreshControl
+                    refreshing={refreshing}
+                    onRefresh={onRefresh}
+                    colors={["#02929A"]} // Màu sắc của spinner khi làm mới
+                />
+            }
+        >
             {filteredCourses.map((course, index) => {
                 const vocabulary = courseVocabularyMap[course.id] || { totalVocabulary: 0, learnedVocabulary: 0 };
                 return (
                     <View key={index} style={styles.container}>
                         <View style={styles.itemtop}>
                             <Image
+                                source={{
+                                    uri: course.imageUrl.startsWith('/data/user/')
+                                        ? `file://${course.imageUrl}`
+                                        : course.imageUrl || 'https://via.placeholder.com/150',
+                                }}
                                 style={styles.imageuser}
-                                source={{ uri: course.imageUrl || 'https://via.placeholder.com/150' }}
                             />
-                            <Text style={styles.itemtoptext}>{course.title || 'N/A'}</Text>
+
+                            <Text style={styles.itemtoptext}
+                                numberOfLines={1}
+                                ellipsizeMode="tail">{course.title || 'N/A'}</Text>
                             <Entypo
                                 name="dots-three-vertical"
                                 size={24}
@@ -366,6 +386,44 @@ const ItemHome = ({ userId }) => {
                                 <Feather name="bookmark" size={24} color="black" />
                                 <Text style={styles.itembottomtextchild}>{vocabulary.learnedVocabulary}</Text>
                             </View>
+                            <TouchableOpacity
+                                style={styles.itembottombutton}
+                                onPress={async () => {
+                                    // Đặt courseId hiện tại
+                                    setCourseId(course.id);
+
+                                    // Lấy dữ liệu vocabularies và lessonId liên quan đến course
+                                    const lessonsRef = query(
+                                        collection(db, "Lessons"),
+                                        where("courseId", "==", course.id)
+                                    );
+                                    const lessonsSnapshot = await getDocs(lessonsRef);
+
+                                    if (!lessonsSnapshot.empty) {
+                                        const firstLesson = lessonsSnapshot.docs[0]; // Lấy bài học đầu tiên làm ví dụ
+                                        setLessonId(firstLesson.id);
+
+                                        // Lấy vocabularies liên quan đến bài học
+                                        const vocabSnapshot = await getDocs(
+                                            query(
+                                                collection(db, "Vocabularies"),
+                                                where("lessonId", "==", firstLesson.id)
+                                            )
+                                        );
+                                        const vocabList = vocabSnapshot.docs.map(doc => ({
+                                            id: doc.id,
+                                            ...doc.data()
+                                        }));
+                                        setVocabularies(vocabList);
+                                    }
+
+                                    // Hiển thị modal
+                                    setReviewModalVisible(true);
+                                }}
+                            >
+                                <Text style={styles.itembottombuttontext}>Ôn tập</Text>
+                            </TouchableOpacity>
+
                             <MaterialIcons
                                 name="dashboard"
                                 size={24}
@@ -388,8 +446,21 @@ const ItemHome = ({ userId }) => {
             <ModalDashBoard
                 modalVisible={modalVisible2}
                 setModalVisible={setModalVisible2}
+                vocabularies={vocabularies}
+                currentUserId={currentUserId}
+                lessonId={lessonId}
+                courseId={courseId}
             />
-         </ScrollView>
+            <ReviewVocabularyModal
+                modalVisible={reviewModalVisible}
+                setModalVisible={setReviewModalVisible}
+                vocabularies={vocabularies}
+                currentUserId={currentUserId}
+                lessonId={lessonId}
+                courseId={courseId}
+            />
+
+        </ScrollView>
     );
 };
 

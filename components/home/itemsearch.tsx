@@ -3,44 +3,59 @@ import { View, Text, Image, StyleSheet } from 'react-native';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import AntDesign from '@expo/vector-icons/AntDesign';
 import { db } from '../../fireBaseConfig';
-import { collection, onSnapshot } from 'firebase/firestore';
+import { collection, onSnapshot, query, where } from 'firebase/firestore';
 import { TouchableOpacity } from 'react-native-gesture-handler';
 import { NavigationProp, useNavigation } from '@react-navigation/native';
 import { format } from 'date-fns';
-import { globalFont } from '../../utils/const';
 
-const CourseItem = () => {
+interface CourseSearchProps {
+  searchQuery: string; // Từ khóa tìm kiếm được truyền từ component cha
+}
+
+const CourseSearch: React.FC<CourseSearchProps> = ({ searchQuery }) => {
   const [courses, setCourses] = useState([]);
   const navigation: NavigationProp<any> = useNavigation();
 
   useEffect(() => {
-    const unsubscribe = onSnapshot(collection(db, 'Courses'), (snapshot) => {
-      const coursesData = snapshot.docs.map(doc => {
+    if (!searchQuery.trim()) {
+      setCourses([]); // Nếu từ khóa trống, không hiển thị kết quả
+      return;
+    }
+  
+    const q = collection(db, 'Courses');
+  
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const allCourses = snapshot.docs.map((doc) => {
         const data = doc.data();
         const createdAt = data.createdAt ? data.createdAt.toDate() : null;
         return { id: doc.id, ...data, createdAt };
       });
-      setCourses(coursesData);
+  
+      // Lọc khóa học có chứa từ khóa trong trường `created_by`
+      const filteredCourses = allCourses.filter((course) =>
+        course.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        course.created_by?.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+  
+      setCourses(filteredCourses);
     });
-
+  
     return () => unsubscribe();
-  }, []);
+  }, [searchQuery]); // Chỉ chạy lại khi `searchQuery` thay đổi
+  
+  
 
   return (
     <View>
       {courses.length > 0 ? (
-        courses.map(course => (
+        courses.map((course) => (
           <View key={course.id} style={styles.cardContainer}>
-            <TouchableOpacity
+            <TouchableOpacity 
               onPress={() => navigation.navigate("ReviewCourseScreen", { courseId: course.id })}
             >
               <View style={styles.header}>
                 <Image
-                  source={{
-                    uri: course.imageUrl.startsWith('/data/user/')
-                      ? `file://${course.imageUrl}`
-                      : course.imageUrl || 'https://via.placeholder.com/150',
-                  }}
+                  source={{ uri: course.imageUrl || 'https://via.placeholder.com/150' }}
                   style={styles.courseImage}
                 />
                 <View style={styles.categoryIcon}>
@@ -56,16 +71,8 @@ const CourseItem = () => {
                   <Text style={styles.categoryText}>{course.language ? course.language.trim() : 'N/A'}</Text>
                   <Text style={styles.authorText}>{course.created_by ? course.created_by.trim() : 'N/A'}</Text>
                 </View>
-                <Text
-                  style={styles.courseTitle}
-                  numberOfLines={1}
-                  ellipsizeMode="tail"
-                >
-                  {course.title ? course.title.trim() : 'N/A'}
-                </Text>
-
-
-                <View style={styles.statsContainer}>
+                <Text style={styles.courseTitle}>{course.title ? course.title.trim() : 'N/A'}</Text>
+<View style={styles.statsContainer}>
                   <View style={styles.stat}>
                   </View>
                   <View style={styles.stat}>
@@ -80,7 +87,7 @@ const CourseItem = () => {
           </View>
         ))
       ) : (
-        <Text style={styles.textnone}>Chưa có khóa học nào được tạo</Text>
+        <Text style={{ textAlign: 'center', marginTop: 20 }}>Không tìm thấy khóa học nào.</Text>
       )}
     </View>
   );
@@ -109,13 +116,6 @@ const styles = StyleSheet.create({
     height: 150,
     borderRadius: 8,
   },
-  textnone: {
-    fontSize: 16,
-    fontFamily: globalFont,
-    textAlign: "center",
-    alignItems: 'center',
-    justifyContent: 'center'
-  },
   categoryIcon: {
     position: 'absolute',
     left: 10,
@@ -139,18 +139,15 @@ const styles = StyleSheet.create({
     marginBottom: 5,
   },
   categoryText: {
-    fontSize: 14,
-    fontFamily: globalFont,
+    fontSize: 12,
     color: '#555',
   },
   authorText: {
-    fontSize: 14,
-    fontFamily: globalFont,
+    fontSize: 12,
     color: '#555',
   },
   courseTitle: {
-    fontSize: 20,
-    fontFamily: globalFont,
+    fontSize: 16,
     fontWeight: 'bold',
     marginBottom: 10,
   },
@@ -172,4 +169,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default CourseItem;
+export default CourseSearch;

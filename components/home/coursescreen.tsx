@@ -6,7 +6,9 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import CourseItem from "./itemcourse";
 import { globalFont } from "../../utils/const";
 import { NavigationProp, useNavigation } from "@react-navigation/native";
-
+import { useState } from "react";
+import CourseSearch from "./itemsearch";
+import AntDesign from '@expo/vector-icons/AntDesign';
 const styles = StyleSheet.create({
     container: {
         flex: 1,
@@ -113,16 +115,15 @@ const styles = StyleSheet.create({
 
     },
     button: {
-        width: 200,
 
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'flex-end',
-        marginVertical: 10,
+        marginTop: 10,
         marginHorizontal: 20,
         backgroundColor: '#02929A', 
         paddingVertical: 15,
-        paddingHorizontal: 30,
+        paddingHorizontal: 15,
         borderRadius: 10,
     },
     buttonText: {
@@ -137,37 +138,51 @@ const styles = StyleSheet.create({
     }
 
 })
+
 const CourseScreen = () => {
     const navigation: NavigationProp<any> = useNavigation();
+    const [searchQuery, setSearchQuery] = useState(""); // Từ khóa tìm kiếm
 
+    const isSearching = searchQuery.trim().length > 0;
+
+  
     return (
-        <View style={styles.container}>
-            <AppHeader />
-            <View style={styles.boxbutton}>
-                <TouchableOpacity style={styles.button} onPress={()=> navigation.navigate("CreateCourseScreen")}>
-                    <Text style={styles.buttonText}>Tạo khóa học</Text>
-                </TouchableOpacity>
-            </View>
-
-            <View style={styles.container}>
-
-                <View style={styles.searchContainer}>
-                    <TextInput
-                        style={styles.searchInput}
-                        placeholder="Tìm kiếm..."
-                        placeholderTextColor="#999"
-                    />
-                    <Ionicons name="search" size={24} color="black" style={styles.searchIcon} />
-                </View>
-
-                <ScrollView style={styles.courseList}>
-          
-                        <CourseItem />
-             
-                </ScrollView>
-            </View>
+      <View style={styles.container}>
+        <AppHeader />
+        
+        {/* Nút tạo khóa học (luôn hiển thị) */}
+        <View style={styles.boxbutton}>
+          <TouchableOpacity
+            style={styles.button}
+            onPress={() => navigation.navigate("CreateCourseScreen")}
+          >
+            <AntDesign name="pluscircleo" size={24} color="white" />
+          </TouchableOpacity>
         </View>
-    )
-}
+  
+        {/* Thanh tìm kiếm */}
+        <View style={styles.searchContainer}>
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Tìm kiếm..."
+            placeholderTextColor="#999"
+            value={searchQuery}
+            onChangeText={(text) => setSearchQuery(text)} // Cập nhật từ khóa tìm kiếm
+          />
+          <Ionicons name="search" size={24} style={styles.searchIcon} />
+        </View>
+  
+        {/* Danh sách khóa học */}
+        <ScrollView style={styles.courseList}>
+          {isSearching ? (
+            <CourseSearch searchQuery={searchQuery} /> // Kết quả tìm kiếm
+          ) : (
+            <CourseItem /> // Hiển thị tất cả khóa học
+          )}
+        </ScrollView>
+      </View>
+    );
+  };
+  
 
 export default CourseScreen;

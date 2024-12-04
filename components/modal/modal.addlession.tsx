@@ -28,19 +28,34 @@ const AddLessonModal = ({ modalVisible, setModalVisible, courseId }) => {
   }, [courseId]); // Thêm courseId vào dependency array
 
   const handleAddLesson = async () => {
-    if (title && courseId && description) {
+    const trimmedTitle = title.trim();
+    const trimmedDescription = description.trim();
+  
+    // Kiểm tra tiêu đề không được rỗng hoặc toàn khoảng trắng
+    if (trimmedTitle.length === 0) {
+      Alert.alert("Lỗi", "Tiêu đề không được chứa toàn khoảng cách, vui lòng nhập nội dung hợp lệ");
+      return;
+    }
+  
+    // Cho phép mô tả rỗng nhưng nếu có nội dung thì không được là khoảng trắng
+    if (description.length > 0 && trimmedDescription.length === 0) {
+      Alert.alert("Lỗi", "Mô tả không được chứa toàn khoảng cách, vui lòng nhập nội dung hợp lệ");
+      return;
+    }
+  
+    if (courseId) {
       try {
         // Tạo ID bài học tự động
         const lessonId = `lesson_${Date.now()}`;
   
-        // Dữ liệu bài học, bao gồm lessonId
+        // Dữ liệu bài học
         const lessonData = {
-          lessonId,  // Thêm lessonId vào dữ liệu
-          courseId,  // Sử dụng courseId từ props
-          idUser,  // Sử dụng courseId từ props
-          title,
-          description,
-          createdAt: new Date(), // Thêm trường createdAt nếu cần
+          lessonId,
+          courseId,
+          idUser,
+          title: trimmedTitle,
+          description: trimmedDescription, // Sử dụng mô tả đã được xử lý
+          createdAt: new Date(),
         };
   
         // Thêm tài liệu vào Firestore với ID cụ thể
@@ -52,10 +67,10 @@ const AddLessonModal = ({ modalVisible, setModalVisible, courseId }) => {
         setidUser('');
         setDescription('');
       } catch (error) {
-        alert('Lỗi khi thêm bài học: ' + error.message);
+        Alert.alert("Lỗi", "Lỗi khi thêm bài học: " + error.message);
       }
     } else {
-      alert('Vui lòng điền đầy đủ thông tin');
+      Alert.alert("Lỗi", "Vui lòng điền đầy đủ thông tin");
     }
   };
   return (

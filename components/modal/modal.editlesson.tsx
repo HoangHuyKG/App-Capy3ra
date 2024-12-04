@@ -4,11 +4,12 @@ import { Button } from 'react-native-paper';
 import { globalFont } from '../../utils/const';
 import { db } from '../../fireBaseConfig';
 import { collection, query, where, getDocs, deleteDoc, doc, setDoc, onSnapshot } from 'firebase/firestore';
+import { NavigationProp, useNavigation } from '@react-navigation/native';
 
 const EditLessonModal = ({ modalVisible, setModalVisible, lessonId }) => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-
+  const navigation: NavigationProp<RootStackParamList> = useNavigation();
   useEffect(() => {
     let unsubscribe;
     if (lessonId && modalVisible) {
@@ -45,6 +46,11 @@ const EditLessonModal = ({ modalVisible, setModalVisible, lessonId }) => {
   };
 
   const handleDeleteLesson = async () => {
+    if (!lessonId) {
+      Alert.alert("Lỗi", "ID bài học không hợp lệ");
+      return;
+    }
+  
     try {
       // Truy vấn các từ vựng liên quan đến bài học
       const vocabulariesRef = collection(db, 'Vocabularies');
@@ -52,21 +58,25 @@ const EditLessonModal = ({ modalVisible, setModalVisible, lessonId }) => {
       const querySnapshot = await getDocs(q);
   
       // Xóa từng từ vựng
-      const deleteVocabularyPromises = querySnapshot.docs.map((docSnapshot) => 
+      const deleteVocabularyPromises = querySnapshot.docs.map((docSnapshot) =>
         deleteDoc(doc(db, 'Vocabularies', docSnapshot.id))
       );
       await Promise.all(deleteVocabularyPromises);
   
       // Xóa bài học sau khi xóa tất cả từ vựng
       await deleteDoc(doc(db, 'Lessons', lessonId));
-      
+  
       Alert.alert('Xóa bài học và từ vựng thành công');
       setModalVisible(false);
+      navigation.goBack();
+  
     } catch (error) {
       console.error('Lỗi khi xóa bài học và từ vựng: ', error);
       Alert.alert('Xóa thất bại');
     }
   };
+  
+  
 
   return (
     <Modal visible={modalVisible} animationType="slide" transparent={true}>

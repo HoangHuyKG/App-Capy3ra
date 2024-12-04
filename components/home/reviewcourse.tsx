@@ -76,13 +76,11 @@ const ReviewCourseScreen = () => {
                         {currentUserId === courseData.idUser ? (
                             <View style={styles.boxbutton}>
                                 <TouchableOpacity style={styles.buttonstudy} onPress={() => setModalVisibleadd(true)}>
-                                    <Entypo name="circle-with-plus" size={20} color="white" />
-                                    <Text style={styles.textbutton}>Thêm bài học</Text>
+                                    <Entypo name="circle-with-plus" size={22} color="white" />
                                 </TouchableOpacity>
 
-                                <TouchableOpacity style={styles.buttonstudy} onPress={() => navigation.navigate("EditCourse", { course: courseData.id })}>
-                                    <MaterialIcons name="edit" size={20} color="white" />
-                                    <Text style={styles.textbutton}>Chỉnh sửa</Text>
+                                <TouchableOpacity style={styles.buttonstudyedit} onPress={() => navigation.navigate("EditCourse", { course: courseData.id })}>
+                                    <MaterialIcons name="edit" size={22} color="white" />
                                 </TouchableOpacity>
                             </View>
                         ) : (
@@ -123,12 +121,21 @@ const styles = StyleSheet.create({
         backgroundColor: '#e6f4f5',
     },
     buttonstudy: {
-        
         display: 'flex',
         flexDirection: 'row',
         justifyContent: 'center',
         alignContent: 'center',
         backgroundColor: "#25B212",
+        padding: 10,
+        borderRadius: 10,
+        marginRight: 10
+    },
+    buttonstudyedit: {
+        display: 'flex',
+        flexDirection: 'row',
+        justifyContent: 'center',
+        alignContent: 'center',
+        backgroundColor: "#FFC107",
         padding: 10,
         borderRadius: 10,
         marginRight: 10
@@ -154,8 +161,9 @@ const styles = StyleSheet.create({
         borderBottomRightRadius: 10,
     },
     headerText: {
+        fontFamily: globalFont,
         color: '#fff',
-        fontSize: 22,
+        fontSize: 24,
         fontWeight: 'bold',
     },
     boxbutton: {
@@ -165,6 +173,9 @@ const styles = StyleSheet.create({
         marginLeft: 10
     },
     subHeaderText: {
+        textAlign: 'justify',
+        fontFamily: globalFont,
+        fontSize: 16,
         color: '#fff',
         marginTop: 5,
     },
@@ -182,6 +193,9 @@ const styles = StyleSheet.create({
     },
     creatorName: {
         color: '#fff',
+        fontFamily: globalFont,
+        fontSize: 20,
+        fontWeight: 'bold'
     },
     daySection: {
         flexDirection: 'row',

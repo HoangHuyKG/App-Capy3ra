@@ -1,17 +1,20 @@
 import React, { useState } from 'react';
-import { Modal, View, Text, TextInput, StyleSheet } from 'react-native';
+import { Modal, View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { Button } from 'react-native-paper';
 import DropDownPicker from 'react-native-dropdown-picker';
-import { globalFont } from '../../utils/const';
+import DocumentPicker from 'react-native-document-picker';
+import RNFS from 'react-native-fs';
+import { collection, setDoc, doc } from 'firebase/firestore';
 import { db } from '../../fireBaseConfig';
-import { collection, setDoc, doc, query, where, getDocs, updateDoc } from 'firebase/firestore';
+import { globalFont } from '../../utils/const';
+import { TextInput } from 'react-native-gesture-handler';
 
-const AddVocabularyModal = ({ modalVisible, setModalVisible, lessonId,
-}) => {
+const AddVocabularyModal = ({ modalVisible, setModalVisible, lessonId }) => {
   const [englishWord, setEnglishWord] = useState('');
   const [vietnameseWord, setVietnameseWord] = useState('');
   const [wordType, setWordType] = useState('');
   const [openWordType, setOpenWordType] = useState(false);
+  const [audioFile, setAudioFile] = useState(null);
 
   const [wordTypes] = useState([
     { label: 'Danh từ', value: 'Danh từ' },
@@ -19,38 +22,65 @@ const AddVocabularyModal = ({ modalVisible, setModalVisible, lessonId,
     { label: 'Tính từ', value: 'Tính từ' },
     { label: 'Trạng từ', value: 'Trạng từ' },
   ]);
+
+  const handlePickFile = async () => {
+    try {
+      const file = await DocumentPicker.pickSingle({
+        type: DocumentPicker.types.audio, // Chỉ chọn tệp âm thanh
+      });
   
-
+      // Lưu tệp mà không sao chép ngay lập tức
+      setAudioFile(file);
+  
+    } catch (err) {
+      if (DocumentPicker.isCancel(err)) {
+        console.log('Hủy chọn tệp');
+      } else {
+        console.error('Lỗi chọn tệp:', err);
+        Alert.alert('Lỗi', 'Không thể chọn tệp.');
+      }
+    }
+  };
+  
   const handleAddWord = async () => {
-
-
-    if (englishWord && vietnameseWord && wordType && lessonId) {
+    if (englishWord && vietnameseWord && wordType && lessonId && audioFile) {
       try {
+        // Tạo đường dẫn lưu trữ cục bộ khi bấm thêm
+        const destinationPath = `${RNFS.DocumentDirectoryPath}/${audioFile.name}`;
+  
+        // Sao chép tệp vào đường dẫn cục bộ
+        await RNFS.copyFile(audioFile.uri, destinationPath);
+  
+        // Lưu thông tin từ vựng vào Firestore
         const wordId = `vocab_${Date.now()}`;
-
         const vocabularyData = {
           wordId,
-          lessonId, // Đảm bảo lessonId có giá trị
+          lessonId,
           englishWord,
           vietnameseWord,
           wordType,
+          audioFileName: audioFile.name, // Tên tệp
+          localPath: destinationPath, // Đường dẫn cục bộ
           createdAt: new Date(),
         };
-
+  
+        // Lưu dữ liệu vào Firestore
         await setDoc(doc(db, 'Vocabularies', wordId), vocabularyData);
-        
+  
+        // Reset form
         setModalVisible(false);
         setEnglishWord('');
         setVietnameseWord('');
         setWordType('');
+        setAudioFile(null);
       } catch (error) {
+        console.error('Lỗi:', error);
         alert('Lỗi khi thêm từ vựng: ' + error.message);
       }
     } else {
-      alert('Vui lòng điền đầy đủ thông tin và chắc chắn rằng lessonId không bị thiếu');
+      alert('Vui lòng điền đầy đủ thông tin và chọn tệp âm thanh.');
     }
   };
-
 
   return (
     <Modal visible={modalVisible} animationType="slide" transparent={true}>
@@ -63,12 +93,20 @@ const AddVocabularyModal = ({ modalVisible, setModalVisible, lessonId,
             value={englishWord}
             onChangeText={setEnglishWord}
           />
+
           <TextInput
             style={styles.input}
             placeholder="Từ tiếng Việt"
             value={vietnameseWord}
             onChangeText={setVietnameseWord}
           />
+
+          <TouchableOpacity onPress={handlePickFile} style={styles.filePickerButton}>
+            <Text style={styles.filePickerText}>
+              {audioFile ? audioFile.name : 'Chọn tệp âm thanh'}
+            </Text>
+          </TouchableOpacity>
+
           <DropDownPicker
             open={openWordType}
             value={wordType}
@@ -78,6 +116,7 @@ const AddVocabularyModal = ({ modalVisible, setModalVisible, lessonId,
             placeholder="Loại từ"
             style={styles.dropdown}
           />
+
           <View style={styles.buttonContainer}>
             <Button mode="contained" onPress={handleAddWord} style={styles.button}>
               <Text style={styles.buttontext}>Thêm</Text>
@@ -92,18 +131,14 @@ const AddVocabularyModal = ({ modalVisible, setModalVisible, lessonId,
   );
 };
 
+
+
 const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
-  },
-  buttontext: {
-    fontFamily: globalFont,
-    fontSize: 16,
-    color: "#ffffff",
-    fontWeight: "bold"
   },
   modalContent: {
     width: '90%',
@@ -125,6 +160,18 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     marginBottom: 15,
   },
+  filePickerButton: {
+    width: '100%',
+    padding: 10,
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 5,
+    marginBottom: 15,
+    alignItems: 'center',
+  },
+  filePickerText: {
+    color: '#555',
+  },
   dropdown: {
     width: '100%',
     marginBottom: 15,
@@ -138,6 +185,13 @@ const styles = StyleSheet.create({
     backgroundColor: "#02929A",
     flex: 1,
     marginHorizontal: 5,
+    borderRadius: 5,
+  },
+  buttontext: {
+    fontFamily: globalFont,
+    fontSize: 16,
+    color: "#ffffff",
+    fontWeight: "bold",
   },
 });
 
