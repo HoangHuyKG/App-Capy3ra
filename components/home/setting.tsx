@@ -135,7 +135,7 @@ const SettingScreen = () => {
 
             <TouchableOpacity style={styles.option} onPress={()=> navigation.navigate("NotificationSettings")}>
                 <Text style={styles.optionText}>Thông báo</Text>
-                <Switch value={notificationsEnabled} onValueChange={toggleNotifications} style={styles.switchbox}/>
+                
             </TouchableOpacity>
 
 
@@ -145,7 +145,12 @@ const SettingScreen = () => {
             </TouchableOpacity> */}
 
 
-
+            <TouchableOpacity style={styles.option} onPress={()=> navigation.navigate("PrivacyPolicyScreen")}>
+                <Text style={styles.optionText}>Chính Sách Quyền Riêng Tư</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.option} onPress={()=> navigation.navigate("Help")}>
+                <Text style={styles.optionText}>Trợ Giúp</Text>
+            </TouchableOpacity>
                 <TouchableOpacity style={styles.option} onPress={handleLogout}>
                     <Text style={styles.optionText}>{userInfo ? "Đăng xuất" : "Đăng nhập"}</Text>
                 </TouchableOpacity>

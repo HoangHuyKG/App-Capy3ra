@@ -20,8 +20,8 @@ import EditVocabularyScreen from '../home/editvocalbulary';
 import editcourevocalbulary from '../home/editcourevocalbulary';
 import Editcourevocalbulary from '../home/editcourevocalbulary';
 import EditCourse from '../home/editcourse';
-
-
+import PrivacyPolicyScreen from '../home/privacypolicy';
+import Help from '../home/help';
 const Stack = createNativeStackNavigator();
 const Drawer = createDrawerNavigator();
 
@@ -47,7 +47,8 @@ const StackNavigator = () => {
       <Stack.Screen name="Editcourevocalbulary" component={Editcourevocalbulary} />
       <Stack.Screen name="CourseScreen" component={CourseScreen} />
       <Stack.Screen name="EditCourse" component={EditCourse} />
-
+      <Stack.Screen name="PrivacyPolicyScreen" component={PrivacyPolicyScreen} />
+      <Stack.Screen name="Help" component={Help} />
     </Stack.Navigator>
   );
 };
